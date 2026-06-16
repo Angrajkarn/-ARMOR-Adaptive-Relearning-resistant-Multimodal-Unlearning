@@ -26,9 +26,8 @@ venv/
 env/
 .venv/
 
-# Jupyter
+# Jupyter checkpoints only (notebooks themselves ARE tracked)
 .ipynb_checkpoints/
-*.ipynb
 
 # OS
 .DS_Store
