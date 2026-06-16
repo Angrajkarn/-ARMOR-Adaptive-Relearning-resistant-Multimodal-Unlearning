@@ -8,8 +8,11 @@ __pycache__/
 dist/
 build/
 
-# Model outputs & checkpoints (too large for git)
-outputs/
+# Model outputs & checkpoints
+# NOTE: outputs/ is tracked here for distilgpt2 debug checkpoints (~8MB each).
+# When upgrading to 7B+ models, add 'outputs/' back to this file to avoid
+# pushing multi-GB model weights to GitHub. Use HuggingFace Hub instead.
+# outputs/
 checkpoints/
 logs/
 
