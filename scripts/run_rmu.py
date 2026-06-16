@@ -32,6 +32,8 @@ def parse_args():
     p.add_argument("--hf-token", default=None)
     p.add_argument("--no-rouge", action="store_true")
     p.add_argument("--run-mia",  action="store_true")
+    p.add_argument("--no-save",  action="store_true",
+                   help="Skip saving checkpoint (for smoke tests)")
     p.add_argument("--layer",    type=int,   default=None)
     p.add_argument("--alpha",    type=float, default=1200.0)
     p.add_argument("--beta",     type=float, default=6.5)
@@ -101,10 +103,13 @@ def main():
         auditor = MembershipInferenceAuditor(model, tokenizer, cfg)
         auditor.audit(eval_fl, eval_rl, method_name="RMU")
 
-    os.makedirs(args.output_dir, exist_ok=True)
-    ckpt = os.path.join(args.output_dir, "rmu_unlearned")
-    save_checkpoint(model, tokenizer, ckpt, cfg)
-    print(f"\n[done] Checkpoint saved to: {ckpt}")
+    if not args.no_save:
+        os.makedirs(args.output_dir, exist_ok=True)
+        ckpt = os.path.join(args.output_dir, "rmu_unlearned")
+        save_checkpoint(model, tokenizer, ckpt, cfg)
+        print(f"\n[done] Checkpoint saved to: {ckpt}")
+    else:
+        print("\n[done] (--no-save: checkpoint skipped)")
     print(f"  forget_quality : {post_result.forget_quality:.4f}")
     print(f"  retain_accuracy: {post_result.retain_accuracy:.4f}")
 

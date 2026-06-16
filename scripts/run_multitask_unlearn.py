@@ -38,6 +38,8 @@ def parse_args():
     p.add_argument("--beta-npo",    type=float, default=0.1)
     p.add_argument("--beta-retain", type=float, default=1.0)
     p.add_argument("--output-dir",  default="outputs/multitask_npo")
+    p.add_argument("--no-save",     action="store_true",
+                   help="Skip saving checkpoint (for smoke tests)")
     return p.parse_args()
 
 
@@ -117,10 +119,13 @@ def main():
         MembershipInferenceAuditor(model, tokenizer, cfg).audit(
             eval_fl, eval_rl, method_name="MultiTask-NPO")
 
-    os.makedirs(args.output_dir, exist_ok=True)
-    ckpt = os.path.join(args.output_dir, "multitask_unlearned")
-    save_checkpoint(model, tokenizer, ckpt, cfg)
-    print(f"\n[done] Saved to: {ckpt}")
+    if not args.no_save:
+        os.makedirs(args.output_dir, exist_ok=True)
+        ckpt = os.path.join(args.output_dir, "multitask_unlearned")
+        save_checkpoint(model, tokenizer, ckpt, cfg)
+        print(f"\n[done] Saved to: {ckpt}")
+    else:
+        print("\n[done] (--no-save: checkpoint skipped)")
     print(f"  forget_quality : {post_result.forget_quality:.4f}")
     print(f"  retain_accuracy: {post_result.retain_accuracy:.4f}")
 

@@ -22,52 +22,54 @@ TESTS = [
     {
         "name"   : "Gradient Ascent (GA)",
         "cmd"    : ["python", "scripts/run_baseline_ga.py",
-                    "--debug", "--no-rouge"],
+                    "--debug", "--no-rouge", "--no-save"],
     },
     {
         "name"   : "NPO",
         "cmd"    : ["python", "scripts/run_baseline_npo.py",
-                    "--debug", "--no-rouge"],
+                    "--debug", "--no-rouge", "--no-save"],
     },
     {
         "name"   : "NPO + SAM  (ARMOR core)",
         "cmd"    : ["python", "scripts/run_npo_sam.py",
-                    "--debug", "--no-rouge"],
+                    "--debug", "--no-rouge", "--no-save"],
     },
     {
         "name"   : "RMU",
         "cmd"    : ["python", "scripts/run_rmu.py",
-                    "--debug", "--no-rouge"],
+                    "--debug", "--no-rouge", "--no-save"],
     },
     {
         "name"   : "Task Vector",
         "cmd"    : ["python", "scripts/run_task_vector.py",
-                    "--debug", "--no-rouge"],
+                    "--debug", "--no-rouge", "--no-save"],
     },
     {
         "name"   : "MultiTask-NPO",
         "cmd"    : ["python", "scripts/run_multitask_unlearn.py",
-                    "--debug", "--no-rouge", "--n-tasks", "2"],
+                    "--debug", "--no-rouge", "--no-save", "--n-tasks", "2"],
     },
     {
         "name"   : "DP-NPO+SAM",
         "cmd"    : ["python", "scripts/run_dp_armor.py",
-                    "--debug", "--no-rouge"],
+                    "--debug", "--no-rouge", "--no-save"],
     },
     {
         "name"   : "LLaVA NPO+SAM (text-only)",
         "cmd"    : ["python", "scripts/run_llava_unlearn.py",
-                    "--debug", "--text-only", "--no-rouge"],
+                    "--debug", "--text-only", "--no-rouge", "--no-save"],
     },
     {
         "name"   : "MUSE Benchmark (books)",
         "cmd"    : ["python", "scripts/run_muse_benchmark.py",
-                    "--debug", "--domain", "books", "--method", "npo_sam"],
+                    "--debug", "--domain", "books", "--method", "npo_sam",
+                    "--no-save"],
     },
     {
         "name"   : "Relearning Attack",
         "cmd"    : ["python", "scripts/run_relearning_attack.py",
-                    "--debug", "--compare", "--original-acc", "0.3983"],
+                    "--debug", "--compare", "--original-acc", "0.3983",
+                    "--no-save"],
     },
 ]
 

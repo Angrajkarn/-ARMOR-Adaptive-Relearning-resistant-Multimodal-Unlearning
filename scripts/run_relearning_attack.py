@@ -63,6 +63,8 @@ def parse_args():
     p.add_argument("--n-samples",     type=int, default=None,
                    help="Number of forget samples for attack (default from config)")
     p.add_argument("--epochs",        type=int, default=None)
+    p.add_argument("--no-save",       action="store_true",
+                   help="No-op: relearning attack never saves checkpoints")
     return p.parse_args()
 
 

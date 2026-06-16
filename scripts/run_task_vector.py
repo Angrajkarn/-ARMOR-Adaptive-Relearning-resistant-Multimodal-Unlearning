@@ -31,6 +31,8 @@ def parse_args():
     p.add_argument("--hf-token",  default=None)
     p.add_argument("--no-rouge",  action="store_true")
     p.add_argument("--run-mia",   action="store_true")
+    p.add_argument("--no-save",   action="store_true",
+                   help="Skip saving checkpoint (for smoke tests)")
     p.add_argument("--lam",       type=float, default=1.0,
                    help="Negation scale lambda (higher = stronger forget)")
     p.add_argument("--ft-epochs", type=int,   default=3)
@@ -95,10 +97,13 @@ def main():
         auditor = MembershipInferenceAuditor(unlearned_model, tokenizer, cfg)
         auditor.audit(eval_fl, eval_rl, method_name="Task-Vector")
 
-    os.makedirs(args.output_dir, exist_ok=True)
-    ckpt = os.path.join(args.output_dir, "task_vector_unlearned")
-    save_checkpoint(unlearned_model, tokenizer, ckpt, cfg)
-    print(f"\n[done] Saved to: {ckpt}")
+    if not args.no_save:
+        os.makedirs(args.output_dir, exist_ok=True)
+        ckpt = os.path.join(args.output_dir, "task_vector_unlearned")
+        save_checkpoint(unlearned_model, tokenizer, ckpt, cfg)
+        print(f"\n[done] Saved to: {ckpt}")
+    else:
+        print("\n[done] (--no-save: checkpoint skipped)")
     print(f"  forget_quality : {post_result.forget_quality:.4f}")
     print(f"  retain_accuracy: {post_result.retain_accuracy:.4f}")
 

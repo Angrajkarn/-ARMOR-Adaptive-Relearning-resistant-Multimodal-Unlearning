@@ -183,6 +183,8 @@ def parse_args():
     p.add_argument("--beta-npo",   type=float, default=0.1)
     p.add_argument("--image-size", type=int,   default=336)
     p.add_argument("--output-dir", default="outputs/llava_npo_sam")
+    p.add_argument("--no-save",    action="store_true",
+                   help="Skip saving checkpoint (for smoke tests)")
     return p.parse_args()
 
 
@@ -259,10 +261,13 @@ def main():
         PrivacyAuditor(cfg, model, tokenizer).audit(
             eval_fl, eval_rl, method_name="LLaVA-NPO+SAM").print_summary()
 
-    os.makedirs(args.output_dir, exist_ok=True)
-    ckpt = os.path.join(args.output_dir, "llava_unlearned")
-    save_checkpoint(model, tokenizer, ckpt, cfg)
-    print(f"\n[done] Saved -> {ckpt}")
+    if not args.no_save:
+        os.makedirs(args.output_dir, exist_ok=True)
+        ckpt = os.path.join(args.output_dir, "llava_unlearned")
+        save_checkpoint(model, tokenizer, ckpt, cfg)
+        print(f"\n[done] Saved -> {ckpt}")
+    else:
+        print("\n[done] (--no-save: checkpoint skipped)")
     print(f"  forget_quality : {post_result.forget_quality:.4f}")
     print(f"  retain_accuracy: {post_result.retain_accuracy:.4f}")
 

@@ -37,6 +37,8 @@ def parse_args():
     p.add_argument("--output-dir", default="outputs/npo")
     p.add_argument("--no-rouge",   action="store_true")
     p.add_argument("--run-mia",    action="store_true")
+    p.add_argument("--no-save",    action="store_true",
+                   help="Skip saving checkpoint (for smoke tests)")
     return p.parse_args()
 
 
@@ -115,9 +117,10 @@ def main():
         post_result.mia_auroc = mia_result.auroc
         post_result.print_table()
 
-    # ── Save ─────────────────────────────────────────────────────────────────────
-    os.makedirs(args.output_dir, exist_ok=True)
-    save_checkpoint(model, tokenizer, os.path.join(args.output_dir, "npo_unlearned"), cfg)
+    # ── Save ───────────────────────────────────────────────────────────
+    if not args.no_save:
+        os.makedirs(args.output_dir, exist_ok=True)
+        save_checkpoint(model, tokenizer, os.path.join(args.output_dir, "npo_unlearned"), cfg)
 
     print(f"\n[main] NPO complete.")
     print(f"  Forget quality : {post_result.forget_quality:.4f}")

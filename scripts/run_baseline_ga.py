@@ -46,6 +46,8 @@ def parse_args():
                    help="Skip slow generative ROUGE evaluation")
     p.add_argument("--run-mia",    action="store_true",
                    help="Run Membership Inference Attack audit")
+    p.add_argument("--no-save",    action="store_true",
+                   help="Skip saving checkpoint (for smoke tests)")
     return p.parse_args()
 
 
@@ -129,11 +131,14 @@ def main():
         post_result.print_table()
 
     # ── Save checkpoint ───────────────────────────────────────────────────────────
-    os.makedirs(args.output_dir, exist_ok=True)
-    ckpt_path = os.path.join(args.output_dir, "ga_unlearned")
-    save_checkpoint(model, tokenizer, ckpt_path, cfg)
+    if not args.no_save:
+        os.makedirs(args.output_dir, exist_ok=True)
+        ckpt_path = os.path.join(args.output_dir, "ga_unlearned")
+        save_checkpoint(model, tokenizer, ckpt_path, cfg)
+        print("\n[main] Done. Checkpoint saved to:", ckpt_path)
+    else:
+        print("\n[main] Done. (--no-save: checkpoint skipped)")
 
-    print("\n[main] Done. Checkpoint saved to:", ckpt_path)
     print(f"[main] Original forget accuracy : {original_forget_acc:.4f}")
     print(f"[main] Post-GA forget accuracy  : {post_result.forget_accuracy:.4f}")
     print(f"[main] Post-GA forget quality   : {post_result.forget_quality:.4f}")

@@ -41,6 +41,8 @@ def parse_args():
                    choices=["ga", "npo", "npo_sam", "rmu",
                             "task_vector", "who", "eul"])
     p.add_argument("--output-dir", default=None)
+    p.add_argument("--no-save",  action="store_true",
+                   help="Skip saving checkpoint (for smoke tests)")
     return p.parse_args()
 
 
@@ -122,10 +124,13 @@ def main():
                                 method_name=args.method)
         result.print_summary()
 
-    os.makedirs(output_dir, exist_ok=True)
-    ckpt = os.path.join(output_dir, "unlearned")
-    save_checkpoint(model, tokenizer, ckpt, cfg)
-    print(f"\n[done] MUSE-{args.domain}/{args.method} -> {ckpt}")
+    if not args.no_save:
+        os.makedirs(output_dir, exist_ok=True)
+        ckpt = os.path.join(output_dir, "unlearned")
+        save_checkpoint(model, tokenizer, ckpt, cfg)
+        print(f"\n[done] MUSE-{args.domain}/{args.method} -> {ckpt}")
+    else:
+        print(f"\n[done] MUSE-{args.domain}/{args.method} (--no-save: checkpoint skipped)")
 
 
 if __name__ == "__main__":

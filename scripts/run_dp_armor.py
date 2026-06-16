@@ -44,6 +44,8 @@ def parse_args():
     p.add_argument("--n-samples", type=int,   default=1000,
                    help="Total dataset size for privacy accounting")
     p.add_argument("--output-dir", default="outputs/dp_npo_sam")
+    p.add_argument("--no-save",   action="store_true",
+                   help="Skip saving checkpoint (for smoke tests)")
     return p.parse_args()
 
 
@@ -120,10 +122,13 @@ def main():
                                 delta=args.delta)
         result.print_summary()
 
-    os.makedirs(args.output_dir, exist_ok=True)
-    ckpt = os.path.join(args.output_dir, "dp_npo_sam_unlearned")
-    save_checkpoint(model, tokenizer, ckpt, cfg)
-    print(f"\n[done] epsilon={final_eps:.3f} | Saved -> {ckpt}")
+    if not args.no_save:
+        os.makedirs(args.output_dir, exist_ok=True)
+        ckpt = os.path.join(args.output_dir, "dp_npo_sam_unlearned")
+        save_checkpoint(model, tokenizer, ckpt, cfg)
+        print(f"\n[done] epsilon={final_eps:.3f} | Saved -> {ckpt}")
+    else:
+        print(f"\n[done] epsilon={final_eps:.3f} | (--no-save: checkpoint skipped)")
     print(f"  forget_quality : {post_result.forget_quality:.4f}")
     print(f"  retain_accuracy: {post_result.retain_accuracy:.4f}")
 
