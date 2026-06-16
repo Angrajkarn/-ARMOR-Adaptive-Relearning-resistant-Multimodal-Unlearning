@@ -8,12 +8,24 @@ accelerate>=0.28.0
 peft>=0.10.0
 
 # ─── 4-bit quantization (GPU only; ignored gracefully on CPU) ─────────────────
-# bitsandbytes>=0.43.0   # Uncomment when running on GPU
+# bitsandbytes>=0.43.0   # Uncomment when running on GPU with QLoRA
 
 # ─── Evaluation ───────────────────────────────────────────────────────────────
 rouge-score>=0.1.2
 scikit-learn>=1.4.0       # AUROC for MIA audit score
 numpy>=1.26.0
+
+# ─── Differential Privacy (Phase 4) ───────────────────────────────────────────
+# opacus>=1.4.0           # Uncomment for true per-sample DP-SGD (GPU only)
+                           # Current dp_npo_sam.py uses batch-level approximation
+
+# ─── Cross-Modal / LLaVA (Phase 5) ───────────────────────────────────────────
+# Pillow>=10.0.0          # Uncomment for real image loading in LLaVA
+# torchvision>=0.16.0     # Uncomment for image preprocessing
+
+# ─── MUSE Benchmark (Phase 3) ─────────────────────────────────────────────────
+# jaechan-llm/MUSE loaded via datasets — no extra install needed
+# Falls back to synthetic data if Hub access fails
 
 # ─── Utilities ────────────────────────────────────────────────────────────────
 tqdm>=4.66.0
