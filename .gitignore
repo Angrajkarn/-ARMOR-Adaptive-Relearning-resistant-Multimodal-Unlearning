@@ -40,3 +40,9 @@ Thumbs.db
 *.safetensors
 *.pt
 *.pth
+
+# Unrelated web project files (not part of ARMOR)
+index.html
+css/
+js/
+assets/
