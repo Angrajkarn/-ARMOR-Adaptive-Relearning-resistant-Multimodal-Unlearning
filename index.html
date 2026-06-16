@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="APEX — Elite Autonomous Trading Intelligence. Professional-grade trading analysis, risk management, and journal for serious traders.">
+  <title>APEX — Elite Trading Intelligence</title>
+
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/animations.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* Inline critical overrides */
+    .hidden { display: none !important; }
+    #journal-modal.hidden { display: none !important; }
+    .direction-btn.active,
+    .grade-btn.selected,
+    .news-rating-btn.selected {
+      outline: 2px solid var(--cyan);
+    }
+    textarea.form-input { font-size: 12px !important; line-height: 1.6; }
+
+    /* Nav active glow */
+    .nav-item.active .nav-label { text-shadow: 0 0 12px rgba(0,212,255,0.5); }
+
+    /* Panel fade */
+    .panel { animation: fadePanel 0.3s ease; }
+
+    /* Stats topbar compact */
+    .topbar-stat + .topbar-stat { margin-left: var(--s3); }
+
+    /* Score btn selected */
+    .score-btn.selected {
+      background: var(--cyan) !important;
+      border-color: var(--cyan) !important;
+      color: #000 !important;
+    }
+
+    /* Responsive chart height */
+    #equity-chart, #perf-equity-chart { height: 200px; }
+    #winrate-chart  { height: 150px; }
+    #rmult-chart    { height: 180px; }
+    #sector-donut   { height: 220px; }
+
+    /* Big stat on dashboard */
+    .dash-big-stat .sc-value { font-size: 28px !important; }
+
+    /* Brief output min-height */
+    #trade-brief-output { min-height: 60px; }
+
+    /* Trade analyzer layout */
+    .analyzer-grid {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: var(--s5);
+      align-items: start;
+    }
+
+    @media (max-width: 1200px) {
+      .analyzer-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Sentiment rating buttons */
+    .news-rating-btn {
+      flex: 1;
+      padding: 8px 4px;
+      font-size: 11px;
+      font-weight: 700;
+      text-align: center;
+      cursor: pointer;
+      border-radius: var(--r-md);
+      border: 1px solid var(--border);
+      background: var(--bg-surface);
+      color: var(--text-muted);
+      transition: all var(--t-fast);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .news-rating-btn:hover { border-color: var(--border-bright); color: var(--text-secondary); }
+    .news-rating-btn[data-rating="STRONG_BULL"].selected,
+    .news-rating-btn[data-rating="BULL"].selected {
+      background: rgba(0,230,118,0.15); border-color: var(--green); color: var(--green);
+    }
+    .news-rating-btn[data-rating="NEUTRAL"].selected {
+      background: rgba(255,255,255,0.05); border-color: var(--border-bright); color: var(--text-primary);
+    }
+    .news-rating-btn[data-rating="BEAR"].selected,
+    .news-rating-btn[data-rating="STRONG_BEAR"].selected {
+      background: rgba(255,61,113,0.15); border-color: var(--red); color: var(--red);
+    }
+
+    /* Direction buttons */
+    .direction-btn {
+      flex: 1; padding: 10px;
+      font-weight: 700; font-size: 13px;
+      cursor: pointer; border-radius: var(--r-md);
+      border: 1px solid var(--border);
+      background: var(--bg-surface); color: var(--text-muted);
+      transition: all var(--t-fast); text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .direction-btn[data-dir="LONG"].active  { background: rgba(0,230,118,0.15); border-color: var(--green); color: var(--green); }
+    .direction-btn[data-dir="SHORT"].active { background: rgba(255,61,113,0.15); border-color: var(--red); color: var(--red); }
+
+    /* Compact table fix */
+    .data-table td, .data-table th { padding: 8px 10px; }
+
+    /* Score circle CSS ring */
+    .conviction-circle svg {
+      position: absolute;
+      top: -3px; left: -3px;
+      width: calc(100% + 6px);
+      height: calc(100% + 6px);
+      transform: rotate(-90deg);
+    }
+
+    /* Macro events columns */
+    .events-grid {
+      display: flex;
+      flex-direction: column;
+      gap: var(--s2);
+    }
+
+    /* Dashboard layout */
+    .dash-row { display: grid; gap: var(--s4); margin-bottom: var(--s4); }
+    .dash-row-4 { grid-template-columns: repeat(4, 1fr); }
+    .dash-row-3 { grid-template-columns: 2fr 1fr 1fr; }
+    .dash-row-2 { grid-template-columns: 2fr 1fr; }
+
+    @media (max-width: 1400px) {
+      .dash-row-4 { grid-template-columns: repeat(2, 1fr); }
+      .dash-row-3, .dash-row-2 { grid-template-columns: 1fr; }
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Live news item */
+    .news-item {
+      padding: 8px 10px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      cursor: pointer;
+      transition: border-color var(--t-fast);
+    }
+    .news-item:hover { border-color: var(--border-bright); }
+    .news-item-headline { font-size: 12px; color: var(--text-primary); line-height: 1.4; margin-bottom: 4px; }
+    .news-item-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; }
+    .news-item-source { color: var(--cyan); }
+
+    /* Live indicator badge */
+    .live-data-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 2px 8px; border-radius: 20px;
+      background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.3);
+      font-size: 10px; color: var(--green); font-weight: 600;
+    }
+    .live-data-badge::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%;
+      background: var(--green);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+  </style>
+</head>
+
+<body>
+<div id="app">
+
+  <!-- ═══════════════════════════════════ SIDEBAR ═════════════════════════════════ -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">AX</div>
+      <div class="logo-text">
+        <strong>APEX</strong>
+        <span>Trading Intelligence</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Navigation</div>
+
+      <div class="nav-item active" data-panel="dashboard">
+        <span class="nav-icon">⚡</span>
+        <span class="nav-label">Command Center</span>
+      </div>
+
+      <div class="nav-item" data-panel="analyzer">
+        <span class="nav-icon">🔍</span>
+        <span class="nav-label">Trade Analyzer</span>
+      </div>
+
+      <div class="nav-item" data-panel="portfolio">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Portfolio Risk</span>
+      </div>
+
+      <div class="nav-item" data-panel="sentiment">
+        <span class="nav-icon">📰</span>
+        <span class="nav-label">Sentiment & Flow</span>
+      </div>
+
+      <div class="nav-item" data-panel="journal">
+        <span class="nav-icon">📓</span>
+        <span class="nav-label">Trade Journal</span>
+      </div>
+
+      <div class="nav-item" data-panel="performance">
+        <span class="nav-icon">📈</span>
+        <span class="nav-label">Performance</span>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">Risk Rules</div>
+      <div style="padding: 0 var(--s5);">
+        <div style="font-size:10px;color:var(--text-muted);line-height:2;">
+          <div>Max risk/trade: <span style="color:var(--amber)">3%</span></div>
+          <div>Max sector: <span style="color:var(--amber)">6%</span></div>
+          <div>Max portfolio: <span style="color:var(--amber)">10%</span></div>
+          <div>Min R:R: <span style="color:var(--cyan)">1:2</span></div>
+          <div>Min conviction: <span style="color:var(--cyan)">7/10</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="regime-badge">
+        <div class="regime-dot"></div>
+        <div class="regime-info">
+          <span class="ri-label">Regime</span>
+          <span class="ri-value" id="sidebar-regime-value">Trending</span>
+        </div>
+        <div class="live-pulse"><div class="live-dot"></div></div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════ MAIN ════════════════════════════════════ -->
+  <div class="main-content">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div>
+        <div class="topbar-title" id="topbar-title">Command Center</div>
+        <div class="topbar-subtitle" id="topbar-subtitle">Live Portfolio Overview</div>
+      </div>
+
+      <div class="topbar-spacer"></div>
+
+      <div class="topbar-stat">
+        <span class="ts-label">Account</span>
+        <span class="ts-value neutral mono" id="dash-account">$50,000</span>
+      </div>
+      <div class="topbar-divider"></div>
+
+      <div class="topbar-stat">
+        <span class="ts-label">Daily P&L</span>
+        <span class="ts-value up" id="dash-daily-pnl">+$0</span>
+      </div>
+      <div class="topbar-divider"></div>
+
+      <div class="topbar-stat">
+        <span class="ts-label">Open Risk</span>
+        <span class="ts-value neutral" id="dash-open-risk">0.00%</span>
+      </div>
+      <div class="topbar-divider"></div>
+
+      <div class="topbar-stat">
+        <span class="ts-label">Win Rate</span>
+        <span class="ts-value neutral" id="dash-winrate">—</span>
+      </div>
+      <div class="topbar-divider"></div>
+
+      <div class="topbar-stat">
+        <span class="ts-label">Market</span>
+        <span class="ts-value" id="market-status-label" style="font-size:10px;font-weight:700;letter-spacing:0.06em;">CHECKING</span>
+      </div>
+      <div class="topbar-divider"></div>
+
+      <div style="display:flex;align-items:center;gap:6px;margin-right:8px;">
+        <div class="ws-status-dot" style="width:7px;height:7px;border-radius:50%;background:var(--text-muted);transition:all 0.3s;"></div>
+        <span class="ws-status-label" style="font-size:10px;color:var(--text-muted);">No Feed</span>
+      </div>
+
+      <div class="topbar-clock" id="topbar-clock">00:00:00</div>
+    </header>
+
+    <!-- Ticker Tape -->
+    <div class="ticker-tape">
+      <div class="ticker-inner" id="ticker-inner"></div>
+    </div>
+
+    <!-- ═══════════════ PANEL: DASHBOARD ═══════════════ -->
+    <section class="panel active" id="panel-dashboard">
+
+      <!-- VIX Warning Banner (hidden by default) -->
+      <div class="vix-warning hidden" id="dash-vix-warning">
+        <span class="vw-icon">⚠️</span>
+        <div>
+          <div class="vw-text">HIGH VIX ENVIRONMENT — Position size reduced 50%</div>
+          <div class="vw-sub">VIX &gt; 25 — Risk parameters automatically halved per APEX rules</div>
+        </div>
+      </div>
+
+      <!-- Row 1: Key Stats -->
+      <div class="dash-row dash-row-4">
+        <div class="stat-card dash-big-stat glow-cyan hover-lift">
+          <div class="sc-label">Total Equity</div>
+          <div class="sc-value mono" id="dash-equity">$50,000</div>
+          <div class="sc-change neutral">Account balance</div>
+          <div class="sc-icon">💰</div>
+        </div>
+
+        <div class="stat-card hover-lift">
+          <div class="sc-label">Win Rate</div>
+          <div class="sc-value mono" id="perf-winrate-dash">—</div>
+          <div class="sc-change neutral">Closed trades</div>
+          <div class="sc-icon">🎯</div>
+        </div>
+
+        <div class="stat-card hover-lift">
+          <div class="sc-label">Expectancy</div>
+          <div class="sc-value mono" id="dash-expectancy">—</div>
+          <div class="sc-change neutral">Per trade avg</div>
+          <div class="sc-icon">📐</div>
+        </div>
+
+        <div class="stat-card hover-lift">
+          <div class="sc-label">Open Risk</div>
+          <div class="sc-value mono text-amber" id="dash-open-risk-card">0.00%</div>
+          <div class="sc-change neutral">Max: 10%</div>
+          <div class="sc-icon">🛡️</div>
+        </div>
+      </div>
+
+      <!-- Row 2: Equity curve + Drawdown + Events -->
+      <div class="dash-row dash-row-2">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Equity Curve</span>
+            <div class="live-pulse"><div class="live-dot"></div><span>Live</span></div>
+          </div>
+          <div class="chart-wrap" style="height:200px">
+            <canvas id="equity-chart"></canvas>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:var(--s4);">
+          <!-- Drawdown Gauges -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Drawdown Limits</span>
+              <span class="badge badge-muted">Non-Negotiable</span>
+            </div>
+            <div class="drawdown-gauge-wrap" id="dash-drawdown-gauges">
+              <!-- rendered by JS -->
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:8px;font-size:10px;color:var(--text-muted);text-align:center;">
+              <span>Daily: 3%</span><span>Weekly: 5%</span><span>Monthly: 10%</span>
+            </div>
+          </div>
+
+          <!-- Macro Events -->
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Upcoming Events</span>
+              <span class="badge badge-amber">⚑ 5-Day Window</span>
+            </div>
+            <div class="events-grid" id="dash-events">
+              <!-- rendered by JS -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3: Open Positions -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Open Positions</span>
+          <button class="btn btn-secondary btn-sm" onclick="App.navigate('journal')">View All</button>
+        </div>
+        <div id="dash-positions">
+          <!-- rendered by JS -->
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ═══════════════ PANEL: ANALYZER ═══════════════ -->
+    <section class="panel" id="panel-analyzer">
+
+      <!-- Step Wizard -->
+      <div class="step-wizard">
+        <div class="step-tab active" data-step="0">
+          <div class="step-num">1</div>
+          <span>Macro Context</span>
+        </div>
+        <div class="step-tab" data-step="1">
+          <div class="step-num">2</div>
+          <span>Tech Structure</span>
+        </div>
+        <div class="step-tab" data-step="2">
+          <div class="step-num">3</div>
+          <span>Momentum</span>
+        </div>
+        <div class="step-tab" data-step="3">
+          <div class="step-num">4</div>
+          <span>Score & Brief</span>
+        </div>
+      </div>
+
+      <div class="analyzer-grid">
+        <!-- Left: Step forms -->
+        <div>
+
+          <!-- ── STEP 1: Macro Context ── -->
+          <div class="step-content active" id="step-0">
+            <div class="card">
+              <div class="card-header">
+                <h3>📡 Step 1 — Macro Context</h3>
+                <span class="badge badge-cyan">HTF Analysis</span>
+              </div>
+
+              <!-- Live Fetch Bar -->
+              <div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:var(--s4);">
+                <div style="flex:1;font-size:11px;color:var(--text-muted);">
+                  ⚡ Enter ticker → click <strong style="color:var(--cyan)">Auto-Fetch Live Data</strong> to auto-populate all indicators
+                </div>
+                <button class="btn btn-primary btn-sm" id="auto-fetch-btn" style="white-space:nowrap;">🔄 Auto-Fetch</button>
+                <div id="fetch-spinner" class="hidden" style="width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--cyan);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+              </div>
+              <div id="fetch-status" class="hidden" style="margin-bottom:var(--s3);"></div>
+
+              <!-- Live Quote Strip -->
+              <div id="live-quote-strip" class="hidden" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:var(--s4);padding:12px;background:var(--bg-surface);border:1px solid var(--border-bright);border-radius:var(--r-md);">
+                <div style="text-align:center;">
+                  <div style="font-size:10px;color:var(--text-muted)">PRICE</div>
+                  <div id="lq-price" class="mono" style="font-size:18px;font-weight:700;color:var(--cyan);">—</div>
+                </div>
+                <div style="text-align:center;">
+                  <div style="font-size:10px;color:var(--text-muted)">CHANGE</div>
+                  <div id="lq-change" class="mono" style="font-size:16px;font-weight:700;">—</div>
+                </div>
+                <div style="text-align:center;">
+                  <div style="font-size:10px;color:var(--text-muted)">HIGH</div>
+                  <div id="lq-high" class="mono" style="font-size:14px;color:var(--green);">—</div>
+                </div>
+                <div style="text-align:center;">
+                  <div style="font-size:10px;color:var(--text-muted)">LOW</div>
+                  <div id="lq-low" class="mono" style="font-size:14px;color:var(--red);">—</div>
+                </div>
+              </div>
+
+              <div class="grid-2 gap-3">
+                <div class="form-group">
+                  <label class="form-label">Ticker Symbol</label>
+                  <input id="az-ticker" class="form-input" type="text" placeholder="e.g. NVDA" style="font-size:16px;font-weight:700;text-transform:uppercase">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Primary Timeframe</label>
+                  <select id="az-timeframe" class="form-select">
+                    <option>15min Scalp</option>
+                    <option>1H Intraday</option>
+                    <option selected>Daily Swing</option>
+                    <option>Weekly Position</option>
+                    <option>Monthly Macro</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Trade Direction</label>
+                <div style="display:flex;gap:8px;">
+                  <button class="direction-btn active" data-dir="LONG">▲ Long</button>
+                  <button class="direction-btn" data-dir="SHORT">▼ Short</button>
+                </div>
+              </div>
+
+              <div class="grid-2 gap-3">
+                <div class="form-group">
+                  <label class="form-label">Market Regime (HTF)</label>
+                  <select id="az-regime" class="form-select">
+                    <option value="TRENDING">📈 Trending</option>
+                    <option value="RANGING">↔️ Ranging</option>
+                    <option value="VOLATILE">⚡ Volatile</option>
+                    <option value="LOW_VOL">😴 Low Volatility</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">VIX Level</label>
+                  <input id="az-vix-level" class="form-input" type="number" step="0.1" placeholder="e.g. 18.5">
+                  <span class="form-hint">VIX &gt; 25 → auto reduce size 50%</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Correlation Check</label>
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;">
+                  <label style="font-size:11px;display:flex;align-items:center;gap:6px;color:var(--text-secondary);cursor:pointer;">
+                    <input type="checkbox" style="accent-color:var(--cyan)"> SPX aligned with bias
+                  </label>
+                  <label style="font-size:11px;display:flex;align-items:center;gap:6px;color:var(--text-secondary);cursor:pointer;">
+                    <input type="checkbox" style="accent-color:var(--cyan)"> DXY not opposing
+                  </label>
+                  <label style="font-size:11px;display:flex;align-items:center;gap:6px;color:var(--text-secondary);cursor:pointer;">
+                    <input type="checkbox" style="accent-color:var(--cyan)"> Yields supportive
+                  </label>
+                  <label style="font-size:11px;display:flex;align-items:center;gap:6px;color:var(--text-secondary);cursor:pointer;">
+                    <input type="checkbox" style="accent-color:var(--cyan)"> No macro event &lt;2 days
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Sector</label>
+                <select id="az-sector" class="form-select">
+                  <option>Technology</option>
+                  <option>Healthcare</option>
+                  <option>Financials</option>
+                  <option>Energy</option>
+                  <option>Industrials</option>
+                  <option>Consumer Disc.</option>
+                  <option>Consumer Staples</option>
+                  <option>Materials</option>
+                  <option>Real Estate</option>
+                  <option>Utilities</option>
+                  <option>Communication</option>
+                  <option>Crypto</option>
+                  <option>Forex</option>
+                  <option>Commodities</option>
+                </select>
+              </div>
+
+              <div class="flex" style="justify-content:flex-end;margin-top:8px;">
+                <button class="btn btn-primary" onclick="App.goAnalyzerStep(1)">Next: Technical Structure →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── STEP 2: Technical Structure ── -->
+          <div class="step-content" id="step-1">
+            <!-- TradingView Chart -->
+            <div class="card" style="margin-bottom:var(--s4);padding:0;overflow:hidden;">
+              <div class="card-header" style="padding:12px 16px;">
+                <span class="card-title">📊 Live Chart</span>
+                <span class="badge badge-muted" id="tv-symbol-badge">—</span>
+                <div style="margin-left:auto;display:flex;gap:6px;">
+                  <button class="btn btn-secondary btn-sm" onclick="App.setTVInterval('D')">D</button>
+                  <button class="btn btn-secondary btn-sm" onclick="App.setTVInterval('W')">W</button>
+                  <button class="btn btn-secondary btn-sm" onclick="App.setTVInterval('60')">1H</button>
+                  <button class="btn btn-secondary btn-sm" onclick="App.setTVInterval('15')">15m</button>
+                </div>
+              </div>
+              <div id="tradingview-chart" style="height:420px;"></div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3>📐 Step 2 — Technical Structure</h3>
+                <span class="badge badge-violet">MTF Analysis</span>
+              </div>
+
+              <div class="grid-2 gap-3">
+                <div class="form-group">
+                  <label class="form-label">Key Support Level</label>
+                  <input class="form-input" type="number" step="0.01" id="az-support" placeholder="e.g. 450.00">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Key Resistance Level</label>
+                  <input class="form-input" type="number" step="0.01" id="az-resistance" placeholder="e.g. 475.00">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Chart Pattern</label>
+                <select id="az-setup" class="form-select">
+                  <option>Bull Flag</option>
+                  <option>Bear Flag</option>
+                  <option>Bull Pennant</option>
+                  <option>Bear Pennant</option>
+                  <option>Ascending Triangle</option>
+                  <option>Descending Triangle</option>
+                  <option>Symmetrical Triangle</option>
+                  <option>Cup &amp; Handle</option>
+                  <option>Head &amp; Shoulders</option>
+                  <option>Inverse H&amp;S</option>
+                  <option>Double Top</option>
+                  <option>Double Bottom</option>
+                  <option>Rising Wedge</option>
+                  <option>Falling Wedge</option>
+                  <option>Bullish Engulfing</option>
+                  <option>Bearish Engulfing</option>
+                  <option>Pin Bar Long</option>
+                  <option>Pin Bar Short</option>
+                  <option>VWAP Reclaim</option>
+                  <option>Breakout Retest</option>
+                  <option>Demand Zone Bounce</option>
+                  <option>Supply Zone Rejection</option>
+                  <option>EMA Crossover</option>
+                  <option>Custom / Other</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">EMA Alignment</label>
+                <select id="az-ema" class="form-select">
+                  <option value="full_bull">9 &gt; 21 &gt; 50 &gt; 200 — Full Bull Stack</option>
+                  <option value="bull">Price &gt; 50 &gt; 200 — Bullish Bias</option>
+                  <option value="neutral">Mixed / Consolidating</option>
+                  <option value="bear">Price &lt; 50 &lt; 200 — Bearish Bias</option>
+                  <option value="full_bear">9 &lt; 21 &lt; 50 &lt; 200 — Full Bear Stack</option>
+                </select>
+              </div>
+
+              <div class="grid-2 gap-3">
+                <div class="form-group">
+                  <label class="form-label">Volume Profile</label>
+                  <select id="az-volume-profile" class="form-select">
+                    <option>Trading at HVN (High-Volume Node)</option>
+                    <option>Low-Volume Gap (fast move expected)</option>
+                    <option>Above POC (Point of Control)</option>
+                    <option>Below POC</option>
+                    <option>At POC</option>
+                    <option>No clear profile</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">ATR (Daily)</label>
+                  <input class="form-input" type="number" step="0.01" id="az-atr" placeholder="e.g. 8.50">
+                  <span class="form-hint">Used for stop buffer calculation</span>
+                </div>
+              </div>
+
+              <div class="flex" style="justify-content:space-between;margin-top:8px;">
+                <button class="btn btn-secondary" onclick="App.goAnalyzerStep(0)">← Back</button>
+                <button class="btn btn-primary" onclick="App.goAnalyzerStep(2)">Next: Momentum →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── STEP 3: Momentum ── -->
+          <div class="step-content" id="step-2">
+            <div class="card">
+              <div class="card-header">
+                <h3>⚡ Step 3 — Momentum & Indicators</h3>
+                <span class="badge badge-amber">LTF Entry Trigger</span>
+              </div>
+
+              <div class="grid-2 gap-3">
+                <div class="form-group">
+                  <label class="form-label">RSI (14)</label>
+                  <input class="form-input mono" type="number" min="0" max="100" id="az-rsi" placeholder="e.g. 58">
+                  <span class="form-hint">&lt;30 oversold · &gt;70 overbought</span>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">RSI Signal</label>
+                  <select id="az-rsi-signal" class="form-select">
+                    <option>Regular Bullish Divergence</option>
+                    <option>Hidden Bullish Divergence</option>
+                    <option>Regular Bearish Divergence</option>
+                    <option>Hidden Bearish Divergence</option>
+                    <option>Neutral / Trending</option>
+                    <option>Overbought (&gt;70)</option>
+                    <option>Oversold (&lt;30)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">MACD Signal</label>
+                <select id="az-macd" class="form-select">
+                  <option>Bullish crossover (signal line)</option>
+                  <option>Histogram momentum building ↑</option>
+                  <option>Histogram momentum fading ↑</option>
+                  <option>Bearish crossover (signal line)</option>
+                  <option>Histogram momentum building ↓</option>
+                  <option>Histogram momentum fading ↓</option>
+                  <option>Neutral / Flat</option>
+                </select>
+              </div>
+
+              <div class="grid-2 gap-3">
+                <div class="form-group">
+                  <label class="form-label">OBV Trend</label>
+                  <select id="az-obv" class="form-select">
+                    <option>Rising (bullish accumulation)</option>
+                    <option>Diverging up (price lagging)</option>
+                    <option>Flat (no conviction)</option>
+                    <option>Falling (distribution)</option>
+                    <option>Diverging down (warning)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Stochastics / %R</label>
+                  <select id="az-stoch" class="form-select">
+                    <option>Oversold + Bullish Cross</option>
+                    <option>Trending up (mid-range)</option>
+                    <option>Overbought + Bearish Cross</option>
+                    <option>Trending down (mid-range)</option>
+                    <option>Neutral</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="flex" style="justify-content:space-between;margin-top:8px;">
+                <button class="btn btn-secondary" onclick="App.goAnalyzerStep(1)">← Back</button>
+                <button class="btn btn-primary" onclick="App.goAnalyzerStep(3)">Next: Score & Brief →</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── STEP 4: Score & Brief ── -->
+          <div class="step-content" id="step-3">
+            <div class="card">
+              <div class="card-header">
+                <h3>🎯 Step 4 — Conviction Score & Trade Brief</h3>
+              </div>
+
+              <!-- Score inputs -->
+              <div style="margin-bottom:var(--s4);">
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:var(--s3);text-transform:uppercase;letter-spacing:0.08em;">Rate Each Category (0–2 pts)</div>
+
+                <!-- Trend Alignment -->
+                <div class="score-input-row">
+                  <span class="sir-label">Trend Alignment</span>
+                  <span class="sir-max">max 2</span>
+                  <div class="score-btns">
+                    <button class="score-btn selected" data-category="0" data-value="0">0</button>
+                    <button class="score-btn" data-category="0" data-value="1">1</button>
+                    <button class="score-btn" data-category="0" data-value="2">2</button>
+                  </div>
+                </div>
+
+                <!-- S/R Quality -->
+                <div class="score-input-row">
+                  <span class="sir-label">S/R Quality</span>
+                  <span class="sir-max">max 2</span>
+                  <div class="score-btns">
+                    <button class="score-btn selected" data-category="1" data-value="0">0</button>
+                    <button class="score-btn" data-category="1" data-value="1">1</button>
+                    <button class="score-btn" data-category="1" data-value="2">2</button>
+                  </div>
+                </div>
+
+                <!-- Pattern Clarity -->
+                <div class="score-input-row">
+                  <span class="sir-label">Pattern Clarity</span>
+                  <span class="sir-max">max 2</span>
+                  <div class="score-btns">
+                    <button class="score-btn selected" data-category="2" data-value="0">0</button>
+                    <button class="score-btn" data-category="2" data-value="1">1</button>
+                    <button class="score-btn" data-category="2" data-value="2">2</button>
+                  </div>
+                </div>
+
+                <!-- Volume Confirmation -->
+                <div class="score-input-row">
+                  <span class="sir-label">Volume Confirmation</span>
+                  <span class="sir-max">max 2</span>
+                  <div class="score-btns">
+                    <button class="score-btn selected" data-category="3" data-value="0">0</button>
+                    <button class="score-btn" data-category="3" data-value="1">1</button>
+                    <button class="score-btn" data-category="3" data-value="2">2</button>
+                  </div>
+                </div>
+
+                <!-- R:R Ratio -->
+                <div class="score-input-row">
+                  <span class="sir-label">Risk/Reward Ratio</span>
+                  <span class="sir-max">max 2</span>
+                  <div class="score-btns">
+                    <button class="score-btn selected" data-category="4" data-value="0">0</button>
+                    <button class="score-btn" data-category="4" data-value="1">1</button>
+                    <button class="score-btn" data-category="4" data-value="2">2</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sentiment bonus -->
+              <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--border);">
+                <span style="font-size:12px;color:var(--text-secondary);flex:1;">Sentiment aligned? (+1 bonus)</span>
+                <div class="toggle" id="sentiment-bonus-toggle"></div>
+              </div>
+
+              <!-- Position sizing -->
+              <div class="divider"></div>
+              <h4 style="margin-bottom:var(--s3);color:var(--text-secondary);">Position Sizing</h4>
+              <div class="grid-2 gap-3">
+                <div class="form-group">
+                  <label class="form-label">Account Size ($)</label>
+                  <input id="az-account" class="form-input mono" type="number" value="50000">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Risk Per Trade (%)</label>
+                  <input id="az-risk-pct" class="form-input mono" type="number" step="0.1" value="2.0">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Entry Price ($)</label>
+                  <input id="az-entry" class="form-input mono" type="number" step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Stop Loss ($)</label>
+                  <input id="az-stoploss" class="form-input mono" type="number" step="0.01" placeholder="0.00">
+                </div>
+              </div>
+
+              <div class="alert alert-warning hidden" id="ps-risk-warn">
+                <div class="alert-icon">⚠️</div>
+                <div>Risk exceeds 3% maximum — reduce position size</div>
+              </div>
+
+              <!-- Thesis & invalidation -->
+              <div class="divider"></div>
+              <div class="form-group">
+                <label class="form-label">Thesis Point 1 — Technical</label>
+                <input id="az-thesis1" class="form-input" type="text" placeholder="e.g. Bull flag breakout above $450 resistance on daily">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Thesis Point 2 — Macro/Sentiment</label>
+                <input id="az-thesis2" class="form-input" type="text" placeholder="e.g. Sector rotation into Tech, SPX trending up">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Thesis Point 3 — Volume/Catalyst</label>
+                <input id="az-thesis3" class="form-input" type="text" placeholder="e.g. Unusual call options flow detected, OBV rising">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Invalidation Condition</label>
+                <input id="az-invalidation" class="form-input" type="text" placeholder="e.g. Price closes below $442 with high volume">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Additional Notes</label>
+                <textarea id="az-notes" class="form-input" rows="2" placeholder="Earnings date, catalysts, warnings..."></textarea>
+              </div>
+
+              <div class="flex gap-2" style="flex-wrap:wrap;">
+                <button class="btn btn-secondary" onclick="App.goAnalyzerStep(2)">← Back</button>
+                <button class="btn btn-primary flex-1" id="generate-brief-btn">⚡ Generate Trade Brief</button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right: Live Conviction Score + Position Output -->
+        <div style="position:sticky;top:76px;">
+
+          <!-- Conviction Score Panel -->
+          <div class="card glow-cyan mb-4" style="margin-bottom:var(--s4);">
+            <div class="card-header">
+              <span class="card-title">Conviction Score</span>
+              <span class="badge badge-muted" id="conviction-grade">—</span>
+            </div>
+
+            <div class="conviction-score-display">
+              <div class="conviction-circle score-low" id="conviction-circle">
+                <div>
+                  <div class="conviction-number" id="conviction-number">0</div>
+                  <div class="conviction-denom">/10</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="conviction-breakdown">
+              <div class="conviction-row">
+                <span class="cr-label">Trend</span>
+                <div class="cr-bar"><div class="progress-bar"><div class="progress-fill cyan" id="score-bar-trend" style="width:0%"></div></div></div>
+                <span class="cr-score" id="score-val-trend">0/2</span>
+              </div>
+              <div class="conviction-row">
+                <span class="cr-label">S/R Quality</span>
+                <div class="cr-bar"><div class="progress-bar"><div class="progress-fill cyan" id="score-bar-sr" style="width:0%"></div></div></div>
+                <span class="cr-score" id="score-val-sr">0/2</span>
+              </div>
+              <div class="conviction-row">
+                <span class="cr-label">Pattern</span>
+                <div class="cr-bar"><div class="progress-bar"><div class="progress-fill cyan" id="score-bar-pattern" style="width:0%"></div></div></div>
+                <span class="cr-score" id="score-val-pattern">0/2</span>
+              </div>
+              <div class="conviction-row">
+                <span class="cr-label">Volume</span>
+                <div class="cr-bar"><div class="progress-bar"><div class="progress-fill cyan" id="score-bar-volume" style="width:0%"></div></div></div>
+                <span class="cr-score" id="score-val-volume">0/2</span>
+              </div>
+              <div class="conviction-row">
+                <span class="cr-label">R:R</span>
+                <div class="cr-bar"><div class="progress-bar"><div class="progress-fill cyan" id="score-bar-rr" style="width:0%"></div></div></div>
+                <span class="cr-score" id="score-val-rr">0/2</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Position Size Widget -->
+          <div class="card mb-4" style="margin-bottom:var(--s4);">
+            <div class="card-header">
+              <span class="card-title">Position Sizing</span>
+              <span class="badge badge-muted" style="font-size:10px">Auto-calculated</span>
+            </div>
+
+            <div class="pos-size-result">
+              <div class="psr-shares" id="ps-shares">—</div>
+              <div class="psr-label">Shares</div>
+              <div class="psr-dollar" id="ps-dollar">—</div>
+
+              <div class="psr-grid">
+                <div class="psr-item">
+                  <div class="psr-item-label">Risk %</div>
+                  <div class="psr-item-value" id="ps-pct">—</div>
+                </div>
+                <div class="psr-item">
+                  <div class="psr-item-label">TP1 <span style="color:var(--text-muted)">(1.5R)</span></div>
+                  <div class="psr-item-value text-green" id="ps-tp1">—</div>
+                </div>
+                <div class="psr-item">
+                  <div class="psr-item-label">TP2 <span style="color:var(--text-muted)">(2.5R)</span></div>
+                  <div class="psr-item-value text-green" id="ps-tp2">—</div>
+                </div>
+                <div class="psr-item">
+                  <div class="psr-item-label">Runner <span style="color:var(--text-muted)">(4R)</span></div>
+                  <div class="psr-item-value text-cyan" id="ps-runner">—</div>
+                </div>
+                <div class="psr-item">
+                  <div class="psr-item-label">R:R at TP1</div>
+                  <div class="psr-item-value" id="ps-rr1">—</div>
+                </div>
+                <div class="psr-item">
+                  <div class="psr-item-label">R:R at TP2</div>
+                  <div class="psr-item-value" id="ps-rr2">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Trade Brief Actions -->
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn btn-secondary flex-1" id="copy-brief-btn">📋 Copy Brief</button>
+            <button class="btn btn-violet flex-1" id="save-journal-btn">💾 Save to Journal</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trade Brief Output -->
+      <div id="trade-brief-output" class="mt-4" style="margin-top:var(--s5);"></div>
+
+    </section>
+
+    <!-- ═══════════════ PANEL: PORTFOLIO ═══════════════ -->
+    <section class="panel" id="panel-portfolio">
+
+      <div class="grid-2 gap-3" style="align-items:start;">
+        <!-- Left -->
+        <div>
+          <!-- API Keys Card -->
+          <div class="card mb-4" style="margin-bottom:var(--s4);border-color:rgba(0,212,255,0.3);">
+            <div class="card-header">
+              <h3>🔑 API Keys</h3>
+              <span class="badge badge-cyan">Required for Live Data</span>
+            </div>
+
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:var(--s3);line-height:1.7;">
+              Get your <strong style="color:var(--cyan)">free</strong> keys:<br>
+              • <a href="https://finnhub.io" target="_blank" style="color:var(--cyan);">finnhub.io</a> → Sign up → copy API key (60 req/min free)<br>
+              • <a href="https://alphavantage.co/support/#api-key" target="_blank" style="color:var(--violet);">alphavantage.co</a> → Get free API key (25 req/day free)
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Finnhub API Key <span style="font-weight:400;color:var(--text-muted)">(quotes, news, calendar, WebSocket)</span></label>
+              <input id="key-finnhub" class="form-input mono" type="password" placeholder="e.g. cq1abc2def3ghi4jkl" autocomplete="off">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Alpha Vantage API Key <span style="font-weight:400;color:var(--text-muted)">(RSI, MACD, ATR, EMA, OBV)</span></label>
+              <input id="key-av" class="form-input mono" type="password" placeholder="e.g. ABCDEF123456" autocomplete="off">
+            </div>
+
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+              <button class="btn btn-primary btn-sm" id="save-keys-btn">💾 Save Keys &amp; Connect</button>
+              <div style="display:flex;align-items:center;gap:5px;font-size:11px;">
+                <div class="ws-status-dot" style="width:7px;height:7px;border-radius:50%;background:var(--text-muted);"></div>
+                <span class="ws-status-label" style="color:var(--text-muted);">WebSocket Feed</span>
+              </div>
+              <span id="key-status" style="font-size:11px;color:var(--text-muted);">Not saved</span>
+            </div>
+
+            <div class="alert alert-info" style="margin-top:var(--s3);">
+              <div class="alert-icon">🔒</div>
+              <div style="font-size:11px;">Keys stored locally in your browser only. Never sent to any server.</div>
+            </div>
+          </div>
+
+          <!-- Settings -->
+          <div class="card mb-4" style="margin-bottom:var(--s4);">
+            <div class="card-header">
+              <h3>⚙️ Account Settings</h3>
+              <button class="btn btn-primary btn-sm" id="save-settings-btn">Save</button>
+            </div>
+
+
+            <div class="grid-2 gap-3">
+              <div class="form-group">
+                <label class="form-label">Account Size ($)</label>
+                <input id="port-account" class="form-input mono" type="number" value="50000">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Default Risk % Per Trade</label>
+                <input id="port-risk-pct" class="form-input mono" type="number" step="0.1" value="2.0">
+                <span class="form-hint">Max 3% absolute limit</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Current VIX Level</label>
+                <input id="port-vix" class="form-input mono" type="number" step="0.1" value="18.5">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Market Regime</label>
+                <select id="port-regime" class="form-select">
+                  <option value="TRENDING">📈 Trending</option>
+                  <option value="RANGING">↔️ Ranging</option>
+                  <option value="VOLATILE">⚡ Volatile</option>
+                  <option value="LOW_VOL">😴 Low Volatility</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:12px;padding:var(--s3);background:var(--red-glow);border:1px solid rgba(255,61,113,0.2);border-radius:var(--r-md);">
+              <div class="toggle" id="vix-toggle"></div>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--red)">High-VIX Mode (VIX &gt; 25)</div>
+                <div style="font-size:11px;color:var(--text-muted)">Enables 50% size reduction on all positions</div>
+              </div>
+            </div>
+
+            <div style="margin-top:var(--s3);">
+              <button class="btn btn-secondary btn-sm" id="snapshot-btn">📸 Save Equity Snapshot</button>
+            </div>
+          </div>
+
+          <!-- Drawdown Monitor -->
+          <div class="card mb-4" style="margin-bottom:var(--s4);">
+            <div class="card-header">
+              <h3>🛡️ Drawdown Monitor</h3>
+              <span class="badge badge-red">Non-Negotiable Limits</span>
+            </div>
+
+            <div class="drawdown-gauge-wrap" id="port-drawdown-gauges"></div>
+
+            <div class="alert alert-info mt-3" style="margin-top:var(--s3);">
+              <div class="alert-icon">ℹ️</div>
+              <div class="alert-content">
+                <div class="alert-title">Drawdown Rules</div>
+                <div style="font-size:11px;">
+                  Daily &gt;3% → Stop trading today &nbsp;|&nbsp;
+                  Weekly &gt;5% → Mandatory review &nbsp;|&nbsp;
+                  Monthly &gt;10% → Reduce size 50%
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Position Size Calculator -->
+          <div class="card">
+            <div class="card-header">
+              <h3>🧮 Position Size Calculator</h3>
+              <span class="badge badge-cyan">Formula: (Acct × Risk%) ÷ (Entry − SL)</span>
+            </div>
+
+            <div class="grid-2 gap-3">
+              <div class="form-group">
+                <label class="form-label">Account Size ($)</label>
+                <input id="port-calc-account" class="form-input mono" type="number" placeholder="50000">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Risk % Per Trade</label>
+                <input id="port-calc-risk" class="form-input mono" type="number" step="0.1" placeholder="2.0">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Entry Price ($)</label>
+                <input id="port-calc-entry" class="form-input mono" type="number" step="0.01" placeholder="0.00">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Stop Loss ($)</label>
+                <input id="port-calc-sl" class="form-input mono" type="number" step="0.01" placeholder="0.00">
+              </div>
+            </div>
+
+            <div class="pos-size-result">
+              <div class="psr-shares" id="calc-shares">—</div>
+              <div class="psr-label">Shares to buy</div>
+              <div class="psr-grid">
+                <div class="psr-item">
+                  <div class="psr-item-label">Dollar Risk</div>
+                  <div class="psr-item-value text-red" id="calc-dollar">—</div>
+                </div>
+                <div class="psr-item">
+                  <div class="psr-item-label">Risk %</div>
+                  <div class="psr-item-value" id="calc-pct">—</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Sector exposure + open risk -->
+        <div>
+          <div class="card mb-4" style="margin-bottom:var(--s4);">
+            <div class="card-header">
+              <h3>📊 Sector Exposure</h3>
+              <span class="badge badge-amber">Max: 6% per sector</span>
+            </div>
+            <div class="chart-wrap" style="height:220px">
+              <canvas id="sector-donut"></canvas>
+            </div>
+            <div style="margin-top:var(--s4);" id="sector-rows">
+              <div class="text-muted text-sm">No open positions</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <h3>⚠️ Portfolio Risk Meter</h3>
+              <span class="badge badge-red">Max: 10% open risk</span>
+            </div>
+
+            <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:var(--s3);">
+              <div class="psr-shares text-amber" id="total-risk-pct">0%</div>
+              <div style="font-size:12px;color:var(--text-muted)">of account at risk / Max: <span id="total-risk-max">10%</span></div>
+            </div>
+
+            <div id="total-risk-bar">
+              <div class="progress-bar" style="height:12px;border-radius:6px;">
+                <div class="progress-fill amber" style="width:0%"></div>
+              </div>
+            </div>
+
+            <div class="alert alert-info mt-3" style="margin-top:var(--s3);">
+              <div class="alert-icon">📋</div>
+              <div class="alert-content">
+                <div style="font-size:11px;line-height:1.8;">
+                  <strong>Risk Rules Recap:</strong><br>
+                  • 1–2% default risk / 3% hard max per trade<br>
+                  • 6% max in one sector<br>
+                  • 10% max simultaneous (5 trades × 2%)<br>
+                  • 50% size reduction when VIX &gt; 25<br>
+                  • Never add to a losing position (unless pre-planned)
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:var(--s4);">
+              <button class="btn btn-danger btn-sm" id="reset-all-btn" style="width:100%;">🗑 Reset All Data</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ═══════════════ PANEL: SENTIMENT ═══════════════ -->
+    <section class="panel" id="panel-sentiment">
+
+      <div class="grid-2 gap-3" style="align-items:start;">
+
+        <div>
+          <!-- News Sentiment -->
+          <div class="card mb-4" style="margin-bottom:var(--s4);">
+            <div class="card-header">
+              <h3>📰 News Sentiment Rating</h3>
+              <button class="btn btn-secondary btn-sm" id="fetch-news-btn">🔄 Fetch Live News</button>
+            </div>
+
+            <!-- Finnhub Sentiment Score -->
+            <div id="finnhub-sentiment-bar" class="hidden" style="padding:10px 12px;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:var(--s3);display:flex;align-items:center;gap:12px;">
+              <div>
+                <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">BULLISH %</div>
+                <div id="fs-bull" style="font-size:18px;font-weight:700;color:var(--green);">—</div>
+              </div>
+              <div style="flex:1;">
+                <div class="progress-bar" style="height:8px;border-radius:4px;">
+                  <div id="fs-bull-bar" class="progress-fill green" style="width:0%;transition:width 0.6s ease;"></div>
+                </div>
+              </div>
+              <div>
+                <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px;">BEARISH %</div>
+                <div id="fs-bear" style="font-size:18px;font-weight:700;color:var(--red);">—</div>
+              </div>
+              <div style="text-align:center;padding-left:8px;border-left:1px solid var(--border);">
+                <div style="font-size:10px;color:var(--text-muted);">BUZZ</div>
+                <div id="fs-buzz" style="font-size:14px;font-weight:700;color:var(--amber);">—</div>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Trade Direction (for conflict check)</label>
+              <div style="display:flex;gap:8px;">
+                <button class="direction-btn sent-dir-btn active" data-dir="LONG">▲ Long</button>
+                <button class="direction-btn sent-dir-btn" data-dir="SHORT">▼ Short</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">News Sentiment</label>
+              <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                <button class="news-rating-btn" data-rating="STRONG_BULL">⬆⬆ Strong Bull</button>
+                <button class="news-rating-btn" data-rating="BULL">⬆ Bull</button>
+                <button class="news-rating-btn selected" data-rating="NEUTRAL">— Neutral</button>
+                <button class="news-rating-btn" data-rating="BEAR">⬇ Bear</button>
+                <button class="news-rating-btn" data-rating="STRONG_BEAR">⬇⬇ Strong Bear</button>
+              </div>
+            </div>
+
+            <!-- Live News Feed -->
+            <div id="live-news-feed" style="display:flex;flex-direction:column;gap:6px;max-height:280px;overflow-y:auto;">
+              <div style="font-size:11px;color:var(--text-muted);padding:8px 0;">
+                Enter a ticker in Trade Analyzer, then click "Fetch Live News" above.
+              </div>
+            </div>
+
+            <!-- Conflict Check Result -->
+            <div id="sentiment-conflict" class="alert alert-info" style="margin-top:var(--s3);">
+              <div class="alert-icon">ℹ️</div>
+              <div class="alert-content">
+                <div class="alert-title">Sentiment Neutral</div>
+                <div>Sentiment is neutral — use as secondary confirmation only.</div>
+              </div>
+            </div>
+          </div>
+
+
+          <!-- Options Flow -->
+          <div class="card mb-4" style="margin-bottom:var(--s4);">
+            <div class="card-header">
+              <h3>📊 Options Flow Signals</h3>
+              <span class="badge badge-violet">Institutional Intent</span>
+            </div>
+
+            <div class="grid-2 gap-3">
+              <div class="form-group">
+                <label class="form-label">Put/Call Ratio</label>
+                <input id="sent-pc-ratio" class="form-input mono" type="number" step="0.01" placeholder="e.g. 0.85">
+                <span class="form-hint">&gt;1.2 bearish · &lt;0.7 bullish extreme</span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">P/C Interpretation</label>
+                <div style="margin-top:8px;"><span id="pc-interpretation" class="badge badge-muted">Enter ratio →</span></div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:var(--s3);">
+              <div class="toggle-wrap">
+                <div class="toggle" id="sent-uoa"></div>
+                <span class="toggle-label">Unusual Options Activity (UOA) — Large OTM volume vs OI</span>
+              </div>
+              <div class="toggle-wrap">
+                <div class="toggle" id="sent-gamma"></div>
+                <span class="toggle-label">Gamma Squeeze Setup — High gamma near current price</span>
+              </div>
+              <div class="toggle-wrap">
+                <div class="toggle" id="sent-darkpool"></div>
+                <span class="toggle-label">Dark Pool Prints — Large block trades at key levels</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <!-- Short Interest -->
+          <div class="card mb-4" style="margin-bottom:var(--s4);">
+            <div class="card-header">
+              <h3>📉 Short Interest</h3>
+              <span class="badge badge-amber">&gt;20% = Squeeze Candidate</span>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Short Interest (% of float)</label>
+              <div class="input-group">
+                <input id="sent-si" class="form-input mono" type="number" step="0.1" placeholder="e.g. 15">
+                <div class="input-addon">%</div>
+              </div>
+            </div>
+
+            <div style="margin-top:var(--s2);">
+              <span id="si-interpretation" class="badge badge-muted">Enter short interest →</span>
+            </div>
+
+            <div class="alert alert-warning mt-3" style="margin-top:var(--s4);">
+              <div class="alert-icon">⚠️</div>
+              <div class="alert-content">
+                <div class="alert-title">Short Squeeze Warning</div>
+                <div style="font-size:11px;">&gt;20% float short + positive catalyst = explosive squeeze potential. Size carefully.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Retail Sentiment -->
+          <div class="card mb-4" style="margin-bottom:var(--s4);">
+            <div class="card-header">
+              <h3>📱 Retail Sentiment</h3>
+              <span class="badge badge-red">Confirmation Only</span>
+            </div>
+
+            <div class="toggle-wrap" style="margin-bottom:var(--s3);">
+              <div class="toggle" id="sent-retail"></div>
+              <span class="toggle-label">Elevated retail interest detected (Reddit/StockTwits trending)</span>
+            </div>
+
+            <div class="alert alert-danger">
+              <div class="alert-icon">⚠️</div>
+              <div class="alert-content">
+                <div class="alert-title">Retail Euphoria = Caution Signal</div>
+                <div style="font-size:11px;">Treat retail mania as a fade signal. Use as confirmation only, never primary. Retail buys tops.</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Analyst Coverage -->
+          <div class="card">
+            <div class="card-header">
+              <h3>🏦 Analyst Coverage</h3>
+            </div>
+
+            <div class="grid-2 gap-3">
+              <div class="form-group">
+                <label class="form-label">Rating Change</label>
+                <select class="form-select">
+                  <option>Upgrade to Buy</option>
+                  <option>Upgrade to Outperform</option>
+                  <option selected>Reiterate / No change</option>
+                  <option>Downgrade to Neutral</option>
+                  <option>Downgrade to Sell</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Price Target ($)</label>
+                <input class="form-input mono" type="number" step="0.01" placeholder="e.g. 520.00">
+                <span class="form-hint">vs current price gap</span>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Sentiment Rules Summary</label>
+              <div style="font-size:11px;color:var(--text-secondary);line-height:2;background:var(--bg-surface);border-radius:var(--r-md);padding:var(--s3);">
+                <div>📰 Rate news: Strong Bullish → Strong Bearish</div>
+                <div>⚠️ Tech bullish + sentiment bearish → reduce 50% or skip</div>
+                <div>✅ Tech + sentiment aligned → +1 conviction bonus</div>
+                <div>📱 Retail euphoria → fade signal (caution)</div>
+                <div>📊 P/C &gt;1.2 → bearish · &lt;0.7 → bullish extreme</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ═══════════════ PANEL: JOURNAL ═══════════════ -->
+    <section class="panel" id="panel-journal">
+
+      <div class="section-header">
+        <h2>📓 Trade Journal</h2>
+        <span class="sh-badge">Post-Trade Review Protocol</span>
+        <div class="sh-spacer"></div>
+        <select id="journal-filter" class="form-select" style="width:140px;">
+          <option value="ALL">All Trades</option>
+          <option value="OPEN">Open</option>
+          <option value="CLOSED">Closed</option>
+          <option value="CANCELLED">Cancelled</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" id="export-journal-btn">📤 Export JSON</button>
+        <button class="btn btn-primary btn-sm" onclick="App.navigate('analyzer')">+ New Trade</button>
+      </div>
+
+      <!-- Review Protocol Legend -->
+      <div class="alert alert-info mb-4" style="margin-bottom:var(--s4);">
+        <div class="alert-icon">📋</div>
+        <div class="alert-content">
+          <strong style="color:var(--cyan)">5-Point Review Protocol</strong> — Click any trade to complete your post-trade review:
+          <span style="color:var(--text-secondary)"> 1) Setup valid? · 2) Entry timing? · 3) Followed plan? · 4) Actual vs expected? · 5) Emotional state</span>
+        </div>
+      </div>
+
+      <!-- Grade Legend -->
+      <div style="display:flex;gap:var(--s3);margin-bottom:var(--s4);flex-wrap:wrap;">
+        <div class="badge badge-green">A — Followed Plan</div>
+        <div class="badge badge-amber">B — Minor Deviation</div>
+        <div class="badge badge-red">C — Major Deviation</div>
+        <div style="margin-left:auto;font-size:11px;color:var(--text-muted)">
+          Psychology Rule: Never revenge trade · Never size up after big win · Feel bored, not excited
+        </div>
+      </div>
+
+      <!-- Journal Entries -->
+      <div id="journal-list">
+        <!-- rendered by JS -->
+      </div>
+
+    </section>
+
+    <!-- ═══════════════ PANEL: PERFORMANCE ═══════════════ -->
+    <section class="panel" id="panel-performance">
+
+      <div class="section-header">
+        <h2>📈 Performance Analytics</h2>
+        <span class="sh-badge">Weekly Review</span>
+        <div class="sh-spacer"></div>
+        <button class="btn btn-secondary btn-sm" id="weekly-review-btn">📤 Export Weekly Review</button>
+      </div>
+
+      <!-- Key Stats -->
+      <div class="dash-row dash-row-4" style="margin-bottom:var(--s4);">
+        <div class="stat-card glow-cyan hover-lift">
+          <div class="sc-label">Win Rate</div>
+          <div class="sc-value mono text-cyan" id="perf-winrate">—</div>
+          <div class="sc-change neutral">Closed trades</div>
+        </div>
+        <div class="stat-card hover-lift">
+          <div class="sc-label">Expectancy</div>
+          <div class="sc-value mono" id="perf-expectancy">—</div>
+          <div class="sc-change neutral">(WR×AvgWin)−(LR×AvgLoss)</div>
+        </div>
+        <div class="stat-card hover-lift">
+          <div class="sc-label">Avg Win</div>
+          <div class="sc-value mono text-green" id="perf-avg-win">—</div>
+          <div class="sc-change up">R-multiple</div>
+        </div>
+        <div class="stat-card hover-lift">
+          <div class="sc-label">Avg Loss</div>
+          <div class="sc-value mono text-red" id="perf-avg-loss">—</div>
+          <div class="sc-change down">R-multiple</div>
+        </div>
+      </div>
+
+      <div class="grid-2 gap-3" style="margin-bottom:var(--s4);">
+        <!-- Total trades + R -->
+        <div class="stat-card">
+          <div class="sc-label">Total Trades</div>
+          <div class="sc-value mono" id="perf-total">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="sc-label">Total R Earned</div>
+          <div class="sc-value mono" id="perf-total-r">—</div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="dash-row dash-row-3" style="margin-bottom:var(--s4);">
+        <!-- Win rate gauge -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Win Rate Gauge</span>
+          </div>
+          <div class="chart-wrap" style="height:150px;">
+            <canvas id="winrate-chart"></canvas>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:var(--s3);font-size:11px;color:var(--text-muted);">
+            <div>Best: <span class="text-green" id="perf-best">—</span></div>
+            <div>Worst: <span class="text-red" id="perf-worst">—</span></div>
+          </div>
+        </div>
+
+        <!-- R-Multiple distribution -->
+        <div class="card" style="grid-column: span 2;">
+          <div class="card-header">
+            <span class="card-title">R-Multiple Distribution</span>
+            <span class="badge badge-muted">Per closed trade</span>
+          </div>
+          <div class="chart-wrap" style="height:180px;">
+            <canvas id="rmult-chart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Equity curve -->
+      <div class="card mb-4" style="margin-bottom:var(--s4);">
+        <div class="card-header">
+          <span class="card-title">Equity Curve</span>
+        </div>
+        <div class="chart-wrap" style="height:200px;">
+          <canvas id="perf-equity-chart"></canvas>
+        </div>
+      </div>
+
+      <!-- Weekly Review Psychological Rules -->
+      <div class="card">
+        <div class="card-header">
+          <h3>🧠 Psychological Rules</h3>
+          <span class="badge badge-violet">Non-Negotiable</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:var(--s3);">
+          <div class="alert alert-danger">
+            <div class="alert-icon">🚫</div>
+            <div>
+              <div style="font-weight:600;margin-bottom:2px;">Never Revenge Trade</div>
+              <div style="font-size:11px;">After a loss, stop. Review. Come back fresh.</div>
+            </div>
+          </div>
+          <div class="alert alert-warning">
+            <div class="alert-icon">⚠️</div>
+            <div>
+              <div style="font-weight:600;margin-bottom:2px;">Never Size Up After Big Win</div>
+              <div style="font-size:11px;">Overconfidence kills accounts. Stay disciplined.</div>
+            </div>
+          </div>
+          <div class="alert alert-info">
+            <div class="alert-icon">😌</div>
+            <div>
+              <div style="font-weight:600;margin-bottom:2px;">Feel Bored, Not Excited</div>
+              <div style="font-size:11px;">Best traders are systematic, not emotional.</div>
+            </div>
+          </div>
+          <div class="alert alert-danger">
+            <div class="alert-icon">🛑</div>
+            <div>
+              <div style="font-weight:600;margin-bottom:2px;">3 Consecutive Losses</div>
+              <div style="font-size:11px;">Mandatory 24hr pause and review session required.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </div><!-- /main-content -->
+</div><!-- /app -->
+
+<!-- Journal Review Modal -->
+<div id="journal-modal" class="modal-overlay hidden">
+  <div class="modal">
+    <div id="journal-modal-body"><!-- rendered by JS --></div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="js/config.js"></script>
+<script src="js/apex.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/journal.js"></script>
+<script src="js/portfolio.js"></script>
+<script src="js/sentiment.js"></script>
+<script src="js/market.js"></script>
+<script src="https://s3.tradingview.com/tv.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
