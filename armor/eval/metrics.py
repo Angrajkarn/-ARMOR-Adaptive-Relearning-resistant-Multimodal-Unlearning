@@ -100,6 +100,52 @@ class EvaluationResult:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Helper function
+# ──────────────────────────────────────────────────────────────────────────────
+
+@torch.no_grad()
+def compute_token_accuracy(
+    model: PreTrainedModel,
+    loader: DataLoader,
+    device: torch.device,
+    desc: str = "  [eval] token accuracy"
+) -> float:
+    """
+    Compute token-level accuracy (% of label tokens predicted correctly).
+    """
+    model.eval()
+    total_correct = 0
+    total_tokens  = 0
+
+    for batch in tqdm(loader, desc=desc, leave=False):
+        input_ids = batch["input_ids"].to(device)
+        attn_mask = batch.get("attention_mask", torch.ones_like(input_ids)).to(device)
+        labels    = batch["labels"].to(device)
+
+        outputs = model(
+            input_ids=input_ids,
+            attention_mask=attn_mask,
+        )
+        logits = outputs.logits  # (B, T, V)
+
+        # Shift: prediction at t → label at t+1
+        shift_logits = logits[:, :-1, :].contiguous()
+        shift_labels = labels[:, 1:].contiguous()
+
+        predictions = shift_logits.argmax(dim=-1)   # (B, T-1)
+
+        # Only evaluate on non-padding positions
+        mask    = (shift_labels != -100)
+        correct = (predictions == shift_labels) & mask
+
+        total_correct += correct.sum().item()
+        total_tokens  += mask.sum().item()
+
+    accuracy = total_correct / max(total_tokens, 1)
+    return accuracy
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Evaluator
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -142,36 +188,7 @@ class UnlearningEvaluator:
         This is the fastest way to measure model behaviour on a set without
         full text generation.
         """
-        self.model.eval()
-        total_correct = 0
-        total_tokens  = 0
-
-        for batch in tqdm(loader, desc="  [eval] token accuracy", leave=False):
-            input_ids = batch["input_ids"].to(self.device)
-            attn_mask = batch["attention_mask"].to(self.device)
-            labels    = batch["labels"].to(self.device)
-
-            outputs = self.model(
-                input_ids=input_ids,
-                attention_mask=attn_mask,
-            )
-            logits = outputs.logits  # (B, T, V)
-
-            # Shift: prediction at t → label at t+1
-            shift_logits = logits[:, :-1, :].contiguous()
-            shift_labels = labels[:, 1:].contiguous()
-
-            predictions = shift_logits.argmax(dim=-1)   # (B, T-1)
-
-            # Only evaluate on non-padding positions
-            mask    = (shift_labels != -100)
-            correct = (predictions == shift_labels) & mask
-
-            total_correct += correct.sum().item()
-            total_tokens  += mask.sum().item()
-
-        accuracy = total_correct / max(total_tokens, 1)
-        return accuracy
+        return compute_token_accuracy(self.model, loader, self.device)
 
     # ── Generative ROUGE ───────────────────────────────────────────────────────
 

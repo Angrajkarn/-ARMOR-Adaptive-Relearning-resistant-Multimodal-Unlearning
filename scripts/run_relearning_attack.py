@@ -29,6 +29,14 @@ import argparse
 import os
 import sys
 
+# Set UTF-8 encoding for stdout and stderr on Windows
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from armor.config import ARMORConfig
