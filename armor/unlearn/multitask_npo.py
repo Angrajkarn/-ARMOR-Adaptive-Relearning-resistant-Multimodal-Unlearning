@@ -96,9 +96,10 @@ class MultiTaskNPOUnlearner:
 
     def _flat_grad(self) -> torch.Tensor:
         """Flatten all parameter gradients into a single vector."""
+        target_device = next(self.model.parameters()).device
         return torch.cat([
-            p.grad.view(-1) if p.grad is not None
-            else torch.zeros(p.numel(), device=self.cfg.device)
+            p.grad.view(-1).to(target_device) if p.grad is not None
+            else torch.zeros(p.numel(), device=target_device)
             for p in self.model.parameters()
         ])
 
@@ -107,7 +108,7 @@ class MultiTaskNPOUnlearner:
         idx = 0
         for p in self.model.parameters():
             n = p.numel()
-            p.grad = flat_grad[idx:idx+n].view_as(p).clone()
+            p.grad = flat_grad[idx:idx+n].view_as(p).to(p.device).clone()
             idx += n
 
     def train(self,

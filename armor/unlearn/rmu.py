@@ -188,7 +188,7 @@ class RMUUnlearner:
 
                 # Target: c * u, broadcast to [B, T, H]
                 target = self.c_scale * self.u.unsqueeze(0).unsqueeze(0)
-                target = target.expand_as(h_forget)
+                target = target.expand_as(h_forget).to(h_forget.device)
                 forget_loss = F.mse_loss(h_forget, target)
 
                 # ── Retain: keep h_L(x_r) ≈ h_L_ref(x_r) ─────────────────
@@ -203,7 +203,7 @@ class RMUUnlearner:
                     self.ref_model(input_ids=r_ids, attention_mask=r_mask)
                     h_ref = ref_extractor.hidden_state.detach()
 
-                retain_loss = F.mse_loss(h_retain, h_ref)
+                retain_loss = F.mse_loss(h_retain, h_ref.to(h_retain.device))
 
                 # ── Total loss ─────────────────────────────────────────────
                 loss = self.alpha * forget_loss + self.beta * retain_loss

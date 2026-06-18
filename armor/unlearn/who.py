@@ -100,9 +100,10 @@ class WHOUnlearner:
                 f_loss.backward()
 
                 # Capture flat forget gradient
+                target_device = next(self.model.parameters()).device
                 g_f = torch.cat([
-                    p.grad.view(-1) if p.grad is not None
-                    else torch.zeros(p.numel(), device=self.cfg.device)
+                    p.grad.view(-1).to(target_device) if p.grad is not None
+                    else torch.zeros(p.numel(), device=target_device)
                     for p in self.model.parameters()
                 ])
                 optimizer.zero_grad()
@@ -120,8 +121,8 @@ class WHOUnlearner:
                 r_loss.backward()
 
                 g_r = torch.cat([
-                    p.grad.view(-1) if p.grad is not None
-                    else torch.zeros(p.numel(), device=self.cfg.device)
+                    p.grad.view(-1).to(target_device) if p.grad is not None
+                    else torch.zeros(p.numel(), device=target_device)
                     for p in self.model.parameters()
                 ])
                 optimizer.zero_grad()
@@ -137,8 +138,8 @@ class WHOUnlearner:
                 with torch.no_grad():
                     for p in self.model.parameters():
                         n = p.numel()
-                        go_chunk = g_ortho[idx:idx+n].view_as(p)
-                        gr_chunk = g_r[idx:idx+n].view_as(p)
+                        go_chunk = g_ortho[idx:idx+n].view_as(p).to(p.device)
+                        gr_chunk = g_r[idx:idx+n].view_as(p).to(p.device)
                         # Set synthetic gradient: retain descent - forget ascent
                         p.grad = self.beta * gr_chunk - self.alpha * go_chunk
                         idx += n

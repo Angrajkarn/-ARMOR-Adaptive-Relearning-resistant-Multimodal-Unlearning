@@ -157,9 +157,11 @@ class DPNPOSAMUnlearner:
 
     def _sam_perturb(self, optimizer: torch.optim.Optimizer) -> None:
         """SAM Step 1: perturb weights toward sharp region."""
-        grad_norm = torch.norm(
-            torch.stack([p.grad.norm() for p in self.model.parameters()
-                         if p.grad is not None]))
+        norms = [p.grad.norm().cpu() for p in self.model.parameters()
+                 if p.grad is not None]
+        if not norms:
+            return
+        grad_norm = torch.norm(torch.stack(norms)).item()
         scale = self.sam_rho / (grad_norm + 1e-12)
         with torch.no_grad():
             for p in self.model.parameters():

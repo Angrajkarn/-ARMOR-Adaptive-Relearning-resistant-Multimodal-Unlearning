@@ -117,7 +117,7 @@ class SAMOptimizer(Optimizer):
         After calling this, run another forward+backward pass to get
         gradients at the perturbed point, then call second_step().
         """
-        grad_norm = self._grad_norm()
+        grad_norm = self._grad_norm().item()
 
         for group in self.param_groups:
             scale = group["rho"] / (grad_norm + 1e-12)

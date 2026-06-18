@@ -92,11 +92,11 @@ class CrossModalNPOSAMUnlearner:
         return -F.logsigmoid(-self.beta_npo * log_ratio).mean()
 
     def _sam_perturb(self):
-        norms = [p.grad.norm() for p in self.model.parameters()
+        norms = [p.grad.norm().cpu() for p in self.model.parameters()
                  if p.grad is not None]
         if not norms:
             return
-        g_norm = torch.norm(torch.stack(norms))
+        g_norm = torch.norm(torch.stack(norms)).item()
         scale  = self.sam_rho / (g_norm + 1e-12)
         with torch.no_grad():
             for p in self.model.parameters():
