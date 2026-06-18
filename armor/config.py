@@ -132,7 +132,12 @@ class ARMORConfig:
         """Auto-detect best available device."""
         import torch
         if torch.cuda.is_available():
-            return "cuda"
+            try:
+                # Test if CUDA is actually working (e.g., checks against incompatible sm_60 GPUs)
+                _ = torch.ones(1, device="cuda")
+                return "cuda"
+            except Exception:
+                return "cpu"
         if hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
             return "mps"
         return "cpu"
