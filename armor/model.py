@@ -107,6 +107,19 @@ def get_model_and_tokenizer(
         print(f"[model] Loading '{model_name}' on device='{device}' "
               f"(qlora={cfg.use_qlora})")
 
+    # Clean up stale HF lock files if any exist (prevents infinite hangs after aborted/killed runs)
+    try:
+        import pathlib
+        cache_dir = pathlib.Path.home() / ".cache" / "huggingface" / "hub"
+        if cache_dir.exists():
+            for lock_file in cache_dir.glob("**/*.lock"):
+                try:
+                    lock_file.unlink()
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
     # ── Tokenizer ─────────────────────────────────────────────────────────────
     tokenizer = AutoTokenizer.from_pretrained(
         model_name,
@@ -126,7 +139,10 @@ def get_model_and_tokenizer(
         "low_cpu_mem_usage": True,
     }
 
-    if cfg.use_qlora and device == "cuda":
+    if cfg.model_key == "debug":
+        # Debug model: load on single device, no device_map distribution needed
+        load_kwargs["dtype"] = torch.float32
+    elif cfg.use_qlora and device == "cuda":
         # 4-bit QLoRA: quantize base model, train only adapter weights
         load_kwargs["quantization_config"] = _build_bnb_config()
         load_kwargs["device_map"] = "auto"     # Spread across all GPUs
