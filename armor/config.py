@@ -104,6 +104,42 @@ class ARMORConfig:
     debug: bool = False                        # --debug flag in scripts
     debug_n_samples: int = 16                 # Tiny subset for quick testing
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # RESEARCH EXPANSION MODULES (added 2026-06)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    # ── Module 1 — Lifelong (Continual) Unlearning ───────────────────────────
+    continual_buffer_size: int = 200          # retain exemplars in replay buffer
+    continual_fim_topk: float = 0.30          # fraction of params protected by FIM mask
+    continual_use_fim_mask: bool = False      # enable FIM-based subspace masking
+
+    # ── Module 2 — MoE Targeted Unlearning ───────────────────────────────────
+    moe_router_loss_coeff: float = 0.50       # weight of router-diversion loss
+    moe_prune_experts: bool = False           # enable expert magnitude pruning
+    moe_prune_fraction: float = 0.10          # fraction of expert weights to zero
+
+    # ── Module 3 — Advanced RMU / RLACE ──────────────────────────────────────
+    rlace_n_layers: int = 3                   # number of layers for concept erasure
+    rlace_probe_epochs: int = 10              # epochs to train linear membership probe
+    rlace_whittle_iters: int = 300            # projected gradient descent steps
+
+    # ── Module 4 — Zero-Knowledge Unlearning Verification ────────────────────
+    zk_influence_damping: float = 5e-3        # Tikhonov damping for Hessian approx
+    zk_n_probe_samples: int = 50              # samples for influence estimation
+    zk_influence_threshold: float = 0.01     # min influence gap to declare verified
+
+    # ── Module 5 — Multimodal MIA Audit ──────────────────────────────────────
+    mm_mia_contrastive_temp: float = 0.07     # softmax temperature for contrastive loss
+    mm_mia_contrastive_coeff: float = 1.0    # weight of contrastive unlearning loss
+    mm_mia_similarity_threshold: float = 0.50  # cosine sim threshold for MIA detection
+
+    # ── Module 6 — Modular LoRA Unlearning ───────────────────────────────────
+    lora_unlearn_r: int = 16                  # rank of forget LoRA adapter
+    lora_unlearn_alpha: int = 32              # LoRA alpha for forget adapter
+    lora_unlearn_scale: float = 1.0           # λ — subtraction scale factor
+    lora_retain_r: int = 8                    # rank of retain LoRA (0 = disabled)
+    lora_merge_final: bool = True             # merge adapters into base weights at end
+
     def __post_init__(self):
         if self.debug:
             # Override to tiny model + minimal data for fast CPU smoke test

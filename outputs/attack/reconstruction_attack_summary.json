@@ -1,0 +1,16 @@
+{
+  "pre_unlearn": {
+    "greedy_rouge_l": 0.15267972678201716,
+    "beam_rouge_l": 0.23293248612083964,
+    "tree_rouge_l": 0.2948660631494169,
+    "avg_logprob": -2.8234541565179825,
+    "leakage_rate": 0.0
+  },
+  "post_unlearn": {
+    "greedy_rouge_l": 0.12588809316611704,
+    "beam_rouge_l": 0.23508111847884391,
+    "tree_rouge_l": 0.2996637390841281,
+    "avg_logprob": -2.9829010665416718,
+    "leakage_rate": 0.0
+  }
+}

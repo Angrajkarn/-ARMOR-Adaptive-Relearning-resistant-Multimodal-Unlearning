@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARMOR GDPR Compliance Certificate</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #080a13;
+            --card-bg: rgba(18, 22, 40, 0.65);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --accent-primary: #4f46e5;
+            --accent-cyan: #06b6d4;
+            --accent-purple: #a855f7;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(79, 70, 229, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.12) 0px, transparent 50%),
+                radial-gradient(at 50% 50%, rgba(6, 182, 212, 0.08) 0px, transparent 60%);
+            background-attachment: fixed;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1rem;
+        }
+
+        .certificate-container {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 900px;
+            padding: 3rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Glow effects */
+        .certificate-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-primary), var(--accent-purple));
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            padding-bottom: 2rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .header-logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 800;
+            letter-spacing: -0.05em;
+            background: linear-gradient(135deg, #06b6d4, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .badge-verified {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--success);
+            padding: 0.6rem 1.2rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 0.05em;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.15);
+            text-transform: uppercase;
+        }
+
+        .title-block {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .title-block h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.4rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.02em;
+        }
+
+        .title-block p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+
+        .meta-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .meta-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            padding: 1.2rem 1.5rem;
+            border-radius: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .meta-card:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: rgba(255, 255, 255, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .meta-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 0.4rem;
+        }
+
+        .meta-value {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 1.1rem;
+            word-break: break-all;
+        }
+
+        .meta-hash {
+            font-family: monospace;
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            word-break: break-all;
+        }
+
+        .metrics-section {
+            margin-bottom: 3.5rem;
+        }
+
+        .section-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-title::after {
+            content: '';
+            flex-grow: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.08);
+            margin-left: 1rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.015);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 18px;
+            padding: 1.8rem 1.5rem;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            background: rgba(255, 255, 255, 0.03);
+            border-color: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 10px 20px -10px rgba(0,0,0,0.3);
+            transform: translateY(-4px);
+        }
+
+        .metric-badge {
+            position: absolute;
+            top: 0.8rem;
+            right: 0.8rem;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .metric-val {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin: 0.8rem 0;
+            letter-spacing: -0.03em;
+        }
+
+        .metric-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .commitment-log {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 14px;
+            padding: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .log-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.6rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            font-size: 0.85rem;
+        }
+
+        .log-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .log-label {
+            color: var(--text-secondary);
+        }
+
+        .log-val {
+            font-family: monospace;
+            color: var(--text-primary);
+            max-width: 60%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .signature-block {
+            background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(168, 85, 247, 0.08) 100%);
+            border: 1px dashed rgba(168, 85, 247, 0.25);
+            border-radius: 16px;
+            padding: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .sig-details {
+            max-width: 65%;
+        }
+
+        .sig-title {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+            font-size: 1.1rem;
+        }
+
+        .sig-hash {
+            font-family: monospace;
+            font-size: 0.78rem;
+            color: var(--accent-cyan);
+            word-break: break-all;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.5rem;
+            border-radius: 6px;
+            margin-top: 0.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.03);
+        }
+
+        .sig-badge {
+            text-align: center;
+        }
+
+        .sig-stamp {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 800;
+            font-size: 0.9rem;
+            border: 2px solid var(--accent-purple);
+            color: var(--accent-purple);
+            padding: 0.8rem 1.2rem;
+            border-radius: 8px;
+            text-transform: uppercase;
+            transform: rotate(-5deg);
+            display: inline-block;
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.1);
+        }
+
+        @media (max-width: 768px) {
+            .certificate-container {
+                padding: 1.5rem;
+            }
+            .meta-grid {
+                grid-template-columns: 1fr;
+            }
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            .signature-block {
+                flex-direction: column;
+                gap: 1.5rem;
+                text-align: center;
+            }
+            .sig-details {
+                max-width: 100%;
+            }
+        }
+
+        @media print {
+            body {
+                background: white;
+                color: black;
+                padding: 0;
+            }
+            .certificate-container {
+                border: none;
+                box-shadow: none;
+                background: white;
+                color: black;
+                backdrop-filter: none;
+            }
+            .meta-card, .metric-card, .commitment-log, .signature-block {
+                background: #f9fafb !important;
+                border: 1px solid #e5e7eb !important;
+                color: black !important;
+            }
+            .meta-hash, .sig-hash {
+                background: #f3f4f6 !important;
+                color: #111827 !important;
+                border: 1px solid #d1d5db !important;
+            }
+            .badge-verified {
+                border: 1px solid #10b981;
+                background: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="certificate-container">
+        <div class="header">
+            <div class="header-logo">ARMOR</div>
+            <div class="badge-verified">
+                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="display:inline; vertical-align:middle;">
+                    <path fill-rule="evenodd" d="M6.267 3.455a.75.75 0 00-.708-.523H4.5a2.5 2.5 0 00-2.5 2.5v1.059a.75.75 0 00.523.708 3.5 3.5 0 010 6.596.75.75 0 00-.523.708v1.059a2.5 2.5 0 002.5 2.5h1.059a.75.75 0 00.708-.523 3.5 3.5 0 016.596 0 .75.75 0 00.708.523h1.059a2.5 2.5 0 002.5-2.5v-1.059a.75.75 0 00-.523-.708 3.5 3.5 0 010-6.596.75.75 0 00.523-.708V5.455a2.5 2.5 0 00-2.5-2.5h-1.059a.75.75 0 00-.708.523 3.5 3.5 0 01-6.596 0zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"/>
+                </svg>
+                Verified Erasure
+            </div>
+        </div>
+
+        <div class="title-block">
+            <h1>GDPR Compliance Certificate</h1>
+            <p>Cryptographic & Empirical Verification of Right to be Forgotten</p>
+        </div>
+
+        <div class="meta-grid">
+            <div class="meta-card">
+                <div class="meta-label">Certificate ID</div>
+                <div class="meta-value" style="font-size:0.95rem; font-family:monospace; color:var(--accent-cyan);">90e38493-a9a3-465f-9baf-fdfce0dae268</div>
+            </div>
+            <div class="meta-card">
+                <div class="meta-label">Timestamp (UTC)</div>
+                <div class="meta-value" style="font-size:0.95rem; font-family:monospace;">2026-06-19T19:19:25.071899+00:00</div>
+            </div>
+            <div class="meta-card">
+                <div class="meta-label">Target Model</div>
+                <div class="meta-value">distilgpt2</div>
+            </div>
+            <div class="meta-card">
+                <div class="meta-label">Unlearning Method</div>
+                <div class="meta-value" style="color:var(--accent-purple);">GradientAscent</div>
+            </div>
+        </div>
+
+        <div class="metrics-section">
+            <div class="section-title">Compliance Verification Metrics</div>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-badge" style="background-color:#10b981; box-shadow: 0 0 10px #10b981;"></div>
+                    <div class="meta-label">ZK Influence Gap</div>
+                    <div class="metric-val" style="color:#10b981;">VERIFIED</div>
+                    <div class="metric-desc">
+                        Verified 4/4 forget samples<br>
+                        Mean influence delta: 0.0609 (thr=0.01)
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-badge" style="background-color:#ef4444; box-shadow: 0 0 10px #ef4444;"></div>
+                    <div class="meta-label">MIA AUROC</div>
+                    <div class="metric-val" style="color:#ef4444;">0.8594</div>
+                    <div class="metric-desc">
+                        Empirical ε lower bound: 0.6931<br>
+                        DP-SGD ε: N/A (δ=1e-05)
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-badge" style="background-color:#10b981; box-shadow: 0 0 10px #10b981;"></div>
+                    <div class="meta-label">Reconstruction Leakage</div>
+                    <div class="metric-val" style="color:#10b981;">0.0%</div>
+                    <div class="metric-desc">
+                        Tree ROUGE-L: 0.3421<br>
+                        Status: <strong>SECURE</strong> against inversion
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="metrics-section">
+            <div class="section-title">Cryptographic Commitments</div>
+            <div class="commitment-log">
+                <div class="log-row">
+                    <span class="log-label">Pre-Unlearning Model Weight Hash (first 1M params)</span>
+                    <span class="log-val" title="d711ae2be31efbcf43fb6d543f5e3050587a1414c591a1c0e9e3a2117af0c867">d711ae2be31efbcf43fb6d543f5e3050587a1414c591a1c0e9e3a2117af0c867</span>
+                </div>
+                <div class="log-row">
+                    <span class="log-label">Post-Unlearning Model Weight Hash (first 1M params)</span>
+                    <span class="log-val" title="c1a629fc28f1dfecf552baf403eb981ca20ca4afb8bddc257631593dbaecef17">c1a629fc28f1dfecf552baf403eb981ca20ca4afb8bddc257631593dbaecef17</span>
+                </div>
+                <div class="log-row">
+                    <span class="log-label">Forget Dataset Hash</span>
+                    <span class="log-val" title="04317a809a028a547e8d5a200ccbbfb017edfff75839edefb656b7d004b0fa23">04317a809a028a547e8d5a200ccbbfb017edfff75839edefb656b7d004b0fa23</span>
+                </div>
+                <div class="log-row">
+                    <span class="log-label">Pre-Unlearning ZK Commitment</span>
+                    <span class="log-val" title="7a07a1694c2334b737ff0d9ba0891ac751a9e87d588cb7ca3d85feb16e872628">7a07a1694c2334b737ff0d9ba0891ac751a9e87d588cb7ca3d85feb16e872628</span>
+                </div>
+                <div class="log-row">
+                    <span class="log-label">Post-Unlearning ZK Commitment</span>
+                    <span class="log-val" title="738a84f0dee9ecd4bdecf57806b67fd54a1a000ccf25d28980f180b90275ceba">738a84f0dee9ecd4bdecf57806b67fd54a1a000ccf25d28980f180b90275ceba</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="signature-block">
+            <div class="sig-details">
+                <div class="sig-title">Audit Engine Verification Signature</div>
+                <p style="font-size:0.8rem; color:var(--text-secondary);">
+                    This certificate carries an HMAC-SHA256 signature calculated over the complete compliance metrics payload using the private key of the ARMOR root authority. Any modification to the payload invalidates the signature.
+                </p>
+                <div class="sig-hash">
+                    09ae5184ed4d7919bc9b4baab586d8163c10182ce4ccf0da74defea9515c159f
+                </div>
+            </div>
+            <div class="sig-badge">
+                <div class="sig-stamp">ARMOR SIGNED</div>
+                <div style="font-size:0.7rem; color:var(--text-secondary); margin-top:0.4rem;">ARMOR Enterprise Compliance CA</div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

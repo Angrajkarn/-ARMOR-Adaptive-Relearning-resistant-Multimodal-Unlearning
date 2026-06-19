@@ -79,6 +79,61 @@ TESTS = [
                     "--debug", "--compare", "--original-acc", "0.3983",
                     "--no-save"],
     },
+    {
+        "name"   : "Module 1: Lifelong / Continual",
+        "cmd"    : ["python", "scripts/run_continual_unlearn.py",
+                    "--debug", "--no-rouge", "--no-save", "--num-cohorts", "2"],
+    },
+    {
+        "name"   : "Module 2: MoE Targeted GA",
+        "cmd"    : ["python", "scripts/run_moe_unlearn.py",
+                    "--debug", "--no-rouge", "--no-save"],
+    },
+    {
+        "name"   : "Module 3: RLACE RMU",
+        "cmd"    : ["python", "scripts/run_rlace_rmu.py",
+                    "--debug", "--no-rouge", "--no-save", "--rlace-iters", "10"],
+    },
+    {
+        "name"   : "Module 4: ZK Verification",
+        "cmd"    : ["python", "scripts/run_zk_verify.py",
+                    "--debug", "--no-save", "--probe-samples", "4"],
+    },
+    {
+        "name"   : "Module 5: Multimodal MIA Audit",
+        "cmd"    : ["python", "scripts/run_multimodal_mia.py",
+                    "--debug", "--no-save"],
+    },
+    {
+        "name"   : "Module 6: Modular LoRA",
+        "cmd"    : ["python", "scripts/run_lora_unlearn.py",
+                    "--debug", "--no-save", "--no-rouge"],
+    },
+    {
+        "name"   : "Module 7: NASD Decay",
+        "cmd"    : ["python", "scripts/run_nasd.py",
+                    "--debug", "--no-rouge"],
+    },
+    {
+        "name"   : "Module 8: HDI Zero-Shot",
+        "cmd"    : ["python", "scripts/run_hdi_unlearn.py",
+                    "--debug", "--no-rouge", "--no-save"],
+    },
+    {
+        "name"   : "Module 9: CAS Graph Blockade",
+        "cmd"    : ["python", "scripts/run_cas_unlearn.py",
+                    "--debug", "--no-rouge", "--no-save"],
+    },
+    {
+        "name"   : "Reconstruction Attack (Model Inversion)",
+        "cmd"    : ["python", "scripts/run_reconstruction_attack.py",
+                    "--debug", "--no-save"],
+    },
+    {
+        "name"   : "Audit Certificate Generator (GDPR Compliance)",
+        "cmd"    : ["python", "scripts/run_audit_gen.py",
+                    "--debug", "--probe-samples", "4"],
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────

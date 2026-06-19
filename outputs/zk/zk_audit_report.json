@@ -1,0 +1,54 @@
+{
+  "verdict": "VERIFIED ✓",
+  "overall_verified": true,
+  "n_verified": 4,
+  "n_total": 4,
+  "mean_influence_gap": 0.070554,
+  "threshold": 0.01,
+  "method": "GradientAscent",
+  "pre_commitment": {
+    "model_hash": "d711ae2be31efbcf43fb6d543f5e3050587a1414c591a1c0e9e3a2117af0c867",
+    "forget_hash": "04317a809a028a547e8d5a200ccbbfb017edfff75839edefb656b7d004b0fa23",
+    "commitment": "7a07a1694c2334b737ff0d9ba0891ac751a9e87d588cb7ca3d85feb16e872628",
+    "timestamp": "2026-06-19T10:09:34.553341+00:00",
+    "method": "GradientAscent"
+  },
+  "post_commitment": {
+    "model_hash": "97647ad77f9cead17821c69b156d8cddad6f6292173e2bd2eda1e8d0234ba039",
+    "forget_hash": "04317a809a028a547e8d5a200ccbbfb017edfff75839edefb656b7d004b0fa23",
+    "commitment": "8c81a78d3bbb11663b44eca1156d15ef7ed583eabf853361744bb826d1e73ef1",
+    "timestamp": "2026-06-19T10:13:39.988955+00:00",
+    "method": "GradientAscent"
+  },
+  "per_sample": [
+    {
+      "sample_idx": 0,
+      "influence_pre": -0.178188,
+      "influence_post": -0.242688,
+      "influence_gap": 0.0645,
+      "verified": true
+    },
+    {
+      "sample_idx": 1,
+      "influence_pre": -0.371229,
+      "influence_post": -0.437882,
+      "influence_gap": 0.066653,
+      "verified": true
+    },
+    {
+      "sample_idx": 2,
+      "influence_pre": -0.160621,
+      "influence_post": -0.250659,
+      "influence_gap": 0.090038,
+      "verified": true
+    },
+    {
+      "sample_idx": 3,
+      "influence_pre": -0.210869,
+      "influence_post": -0.271894,
+      "influence_gap": 0.061025,
+      "verified": true
+    }
+  ],
+  "generated_at": "2026-06-19T10:16:41.140516+00:00"
+}

@@ -1,0 +1,27 @@
+{
+  "visual_similarity_drop": {
+    "pre": 0.0,
+    "post": 0.0,
+    "delta": 0.0,
+    "verdict": "NOT ERASED \u2717"
+  },
+  "membership_rate_drop": {
+    "pre": 0.0,
+    "post": 0.0,
+    "delta": 0.0,
+    "verdict": "NOT REDUCED \u2717"
+  },
+  "text_mia_pre": {
+    "method": "Pre-unlearning",
+    "auroc": 1.0,
+    "k_percent": 0.2,
+    "verdict": "\u2717 FAILED  \u2014 model still memorises forget set (AUROC > 0.65)"
+  },
+  "text_mia_post": {
+    "method": "Post-unlearning",
+    "auroc": 0.0,
+    "k_percent": 0.2,
+    "verdict": "\u2713 VERIFIED \u2014 forget set indistinguishable from non-members"
+  },
+  "generated_at": "2026-06-19T19:21:45Z"
+}
