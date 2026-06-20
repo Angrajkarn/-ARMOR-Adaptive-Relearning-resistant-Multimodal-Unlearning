@@ -268,7 +268,14 @@ class TemporalValidityScorer:
 
         # Sigmoid decay: σ((t_end - t_now) / halflife)
         delta = (t_expiry - t_now) / self.halflife_sec
-        tau   = 1.0 / (1.0 + math.exp(-delta))
+        # Prevent overflow in math.exp(-delta)
+        val = -delta
+        if val > 100.0:
+            tau = 0.0
+        elif val < -100.0:
+            tau = 1.0
+        else:
+            tau = 1.0 / (1.0 + math.exp(val))
         return float(tau)
 
     def score_all(
