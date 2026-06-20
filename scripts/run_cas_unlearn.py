@@ -102,5 +102,18 @@ def main():
     else:
         print("\n[main] Done. (--no-save: checkpoint skipped)")
 
+    # Save evaluation results to JSON
+    import json
+    res_dict = {
+        "forget_quality": post_result.forget_quality,
+        "forget_accuracy": post_result.forget_accuracy,
+        "retain_accuracy": post_result.retain_accuracy,
+        "mia_auroc": getattr(post_result, "mia_auroc", -1.0)
+    }
+    os.makedirs(args.output_dir, exist_ok=True)
+    with open(os.path.join(args.output_dir, "eval_results.json"), "w", encoding="utf-8") as f:
+        json.dump(res_dict, f, indent=2)
+
+
 if __name__ == "__main__":
     main()

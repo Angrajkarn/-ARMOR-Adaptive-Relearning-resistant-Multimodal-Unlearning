@@ -57,15 +57,15 @@ class ARMORConfig:
     )
 
     # ── TOFU Dataset ──────────────────────────────────────────────────────────
-    tofu_forget_split: str = "forget10"        # forget01 / forget05 / forget10
-    tofu_retain_split: str = "retain90"        # complement of forget split
+    tofu_forget_split: str = "forget01"        # forget01 / forget05 / forget10
+    tofu_retain_split: str = "retain99"        # complement of forget split
     max_seq_len: int = 256                     # Truncate to save memory on CPU
 
     # ── Unlearning Training ───────────────────────────────────────────────────
-    unlearn_epochs: int = 5
+    unlearn_epochs: int = 2
     unlearn_lr: float = 1e-5
-    batch_size: int = 2
-    gradient_accumulation_steps: int = 4      # Effective batch = 8
+    batch_size: int = 4
+    gradient_accumulation_steps: int = 2      # Effective batch = 8
     weight_decay: float = 0.01
     max_grad_norm: float = 1.0
 
