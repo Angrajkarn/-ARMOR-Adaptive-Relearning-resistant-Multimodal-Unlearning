@@ -52,6 +52,13 @@ from armor.unlearn.temporal_decay import (      # TKDU — Temporal Unlearning
     save_knowledge_registry_to_json,
 )
 
+# ── Phase 2 Research (2026-06) ────────────────────────────────────────────────
+from armor.unlearn.lcage import LCAGEUnlearner
+from armor.unlearn.neural_reconsolidation import NRUUnlearner
+from armor.unlearn.morphogenetic_repair import MWRPRepairer
+
+
+
 __all__ = [
     # Baseline
     "GradientAscentUnlearner",
@@ -92,4 +99,9 @@ __all__ = [
     "create_demo_knowledge_registry",
     "load_knowledge_registry_from_json",
     "save_knowledge_registry_to_json",
+    # Phase 2
+    "LCAGEUnlearner",
+    "NRUUnlearner",
+    "MWRPRepairer",
 ]
+

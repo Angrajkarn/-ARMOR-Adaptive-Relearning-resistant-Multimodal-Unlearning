@@ -164,6 +164,26 @@ class ARMORConfig:
     tkdu_near_expiry_threshold: float = 0.50  # validity boundary for "near expiry"
     tkdu_expiry_buffer_days: float = 0.0    # trigger unlearning before expiry
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # PHASE 2 RESEARCH MODULES (added 2026-06)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    # ── LCAGE — Latent Concept Association Graph Erasure ──────────────────────
+    lcage_pmi_threshold: float = 0.50        # Mutual Information threshold for association
+    lcage_coeff: float = 0.30                # Weight factor for multi-hop graph closure loss
+    lcage_max_hops: int = 2                  # Depth of conceptual closure walk
+
+    # ── NRU — Neural Reconsolidation Unlearning ──────────────────────────────
+    nru_recall_lr: float = 5e-5             # LR for recall phase gradient ascent
+    nru_lability_epochs: int = 1            # Epochs to make weights labile
+    nru_stabilize_coeff: float = 0.20        # Loss coefficient for SAM stabilization
+
+    # ── MWRP — Morphogenetic Weight Regeneration ───────────────────────────────
+    mwrp_damage_threshold: float = 0.01      # Absolute parameter difference threshold for damage mask
+    mwrp_repair_epochs: int = 2             # Number of repair distillation epochs
+    mwrp_repair_lr: float = 2e-5             # LR for selective repair distillation
+
+
     def __post_init__(self):
         if self.debug:
             # Override to tiny model + minimal data for fast CPU smoke test

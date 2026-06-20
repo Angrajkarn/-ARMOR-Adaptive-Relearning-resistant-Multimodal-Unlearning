@@ -152,7 +152,24 @@ TESTS = [
                     "--debug", "--no-rouge", "--no-save",
                     "--halflife-days", "1.0"],
     },
+    # ── Phase 2: New Frontier Research Methods ────────────────────────────────
+    {
+        "name"   : "Phase 2: LCAGE (Latent Concept Association Graph)",
+        "cmd"    : ["python", "scripts/run_lcage.py",
+                    "--debug", "--no-rouge", "--no-save"],
+    },
+    {
+        "name"   : "Phase 2: NRU (Neural Reconsolidation)",
+        "cmd"    : ["python", "scripts/run_reconsolidation.py",
+                    "--debug", "--no-rouge", "--no-save"],
+    },
+    {
+        "name"   : "Phase 2: MWRP (Morphogenetic Weight Regeneration)",
+        "cmd"    : ["python", "scripts/run_morphogenetic_repair.py",
+                    "--debug", "--no-rouge", "--no-save"],
+    },
 ]
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 

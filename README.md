@@ -396,7 +396,58 @@ python scripts/run_temporal_unlearn.py --debug --halflife-days 30
 python scripts/run_temporal_unlearn.py --debug --schedule-only   # just print the schedule
 ```
 
+---
+
+### 20. 🔗 LCAGE — Latent Concept Association Graph Erasure *(Phase 2 Novel)*
+
+Targeting the **full associative semantic closure of a forgotten concept**, rather than just the direct token mapping.
+*   **The Gap**: Standard methods only erase direct answers (e.g. "Albert Einstein" -> "physicist"). But related concepts (e.g., "theory of relativity", "E=mc²") remain intact and can be exploited to reconstruct the forgotten concept.
+*   **How it works**:
+    1. Extracts a pointwise mutual information (PMI) graph in the model's token embedding space to identify highly associated tokens.
+    2. Builds the conceptual closure Walk (transitive closure) up to $K$ hops.
+    3. Minimizes the likelihood of these associated concepts given the forget prompt context, weighted by their PMI similarity:
+        $$L_{\text{suppress}} = -\sum_{w \in \text{closure}} \text{PMI}(w) \cdot \log P_\theta(w | x_{\text{forget}})$$
+*   **Full Loss**:
+    $$L_{\text{LCAGE}} = L_{\text{NPO}}(\text{forget}) + \lambda_{\text{retain}} L_{\text{retain}} + \gamma L_{\text{suppress}}$$
+
+```bash
+python scripts/run_lcage.py --debug --lcage-coeff 0.3
+```
+
+---
+
+### 21. 🧠 NRU — Neural Reconsolidation Unlearning *(Phase 2 Novel)*
+
+A neuroscience-grounded weight update method inspired by memory reconsolidation.
+*   **The Gap**: Biological memories are highly stable unless retrieved; once retrieved, they enter a temporarily labile (vulnerable) state during the "reconsolidation window" before being re-stored.
+*   **How it works**:
+    1. **Recall Activation (Lability Phase)**: Performs a small gradient ascent step to maximize the log-likelihood of the forget set, bringing the forgotten circuits into active working memory.
+    2. **Amnestic Erasure**: Executes NPO-based unlearning on the active/labile weights.
+    3. **SAM Stabilization**: Performs a Sharpness-Aware Minimization (SAM) update on the retain set to lock the model into a flat loss minimum, preventing the memory from reconsolidating (re-learning).
+
+```bash
+python scripts/run_reconsolidation.py --debug --recall-lr 5e-5
+```
+
+---
+
+### 22. 🩹 MWRP — Morphogenetic Weight Regeneration Post-Unlearning *(Phase 2 Novel)*
+
+An active weight-repair module inspired by biological morphogenesis.
+*   **The Gap**: Surgical unlearning leaves "holes" in the weight space, degrading general model utility in ways not fully captured by retain-accuracy metrics.
+*   **How it works**:
+    1. Assesses parameter damage by computing absolute difference: $\Delta W = |W_{\text{pre}} - W_{\text{post}}|$.
+    2. Generates a binary gradient mask for altered weights exceeding a threshold.
+    3. Performs selective distillation on the retain set, multiplying gradients by the mask to restrict updates *strictly* to the damaged parameters, repairing collateral utility damage without altering unlearned weights.
+
+```bash
+python scripts/run_morphogenetic_repair.py --debug --damage-threshold 0.01
+```
+
+---
+
 ## 🔐 Enterprise Compliance Suite
+
 
 ### Verifiable Machine Unlearning (VMU) with Zero-Knowledge Proofs
 
@@ -658,11 +709,17 @@ python scripts/run_conformal_verify.py  --debug --alpha 0.05
 python scripts/run_cot_hme.py           --debug --cot-coeff 0.3 --no-rouge
 python scripts/run_temporal_unlearn.py  --debug --halflife-days 30 --no-rouge
 
+# Phase 2: New Frontier Methods
+python scripts/run_lcage.py                 --debug --no-rouge
+python scripts/run_reconsolidation.py       --debug --no-rouge
+python scripts/run_morphogenetic_repair.py  --debug --no-rouge
+
 # Relearning attack
 python scripts/run_relearning_attack.py --debug --compare --original-acc 0.3983
 
-# Run all integration tests (24 tests)
+# Run all integration tests (27 tests)
 python scripts/run_smoke_tests.py
+
 ```
 
 ### Full GPU Run (Mistral-7B + 4-bit QLoRA, ≥16 GB VRAM)
@@ -810,6 +867,9 @@ python scripts/test_api_client.py
 - [x] 📐 **CU-AR** — Conformal Unlearning verification (distribution-free statistical guarantee)
 - [x] 🧠 **CoT-HME** — Chain-of-Thought Hidden Memory Erasure (reasoning trace suppression)
 - [x] 📅 **TKDU** — Temporal Knowledge Decay Unlearning (GDPR Article 17 auto-compliance)
+- [x] 🔗 **LCAGE** — Latent Concept Association Graph Erasure (closure suppression)
+- [x] 🧠 **NRU** — Neural Reconsolidation Unlearning (Recall-activation -> Amnestic erasure -> SAM)
+- [x] 🩹 **MWRP** — Morphogenetic Weight Regeneration Post-Unlearning (damaged weight repair)
 - [ ] Full Mistral-7B / LLaMA-2-7B GPU results (run on Colab)
 - [ ] HuggingFace Hub model card upload
 - [ ] Real LLaVA-1.5-7b multimodal forward pass
@@ -832,6 +892,10 @@ python scripts/test_api_client.py
 11. **Conformal Prediction** — Vovk et al., *"Algorithmic Learning in a Random World"* (2005); Angelopoulos & Bates, *"A Gentle Introduction to Conformal Prediction"* (2021) · [arXiv:2107.07511](https://arxiv.org/abs/2107.07511)
 12. **CoT Reasoning** — Wei et al., *"Chain-of-Thought Prompting Elicits Reasoning in Large Language Models"* (NeurIPS 2022) · [arXiv:2201.11903](https://arxiv.org/abs/2201.11903)
 13. **GDPR Article 17** — European Parliament, *Regulation (EU) 2016/679 — Right to Erasure* (2016)
+14. **Concept Association Graphs** — Speer et al., *"ConceptNet 5.5: An Open Multilingual Graph of General Knowledge"* (AAAI 2017)
+15. **Memory Reconsolidation** — Nader et al., *"Fear memories require protein synthesis in the amygdala for reconsolidation after retrieval"* (Nature 2000)
+16. **Morphogenesis** — Turing, A. M., *"The Chemical Basis of Morphogenesis"* (Philosophical Transactions of the Royal Society of London 1952)
+
 
 ---
 
