@@ -57,6 +57,11 @@ from armor.unlearn.lcage import LCAGEUnlearner
 from armor.unlearn.neural_reconsolidation import NRUUnlearner
 from armor.unlearn.morphogenetic_repair import MWRPRepairer
 
+# ── Phase 3 Research (2026-06) ────────────────────────────────────────────────
+from armor.unlearn.stackelberg_game import SAUGUnlearner
+from armor.unlearn.causal_iu import CausalUnlearner
+from armor.unlearn.federated_robust import BRFUUnlearner
+
 
 
 __all__ = [
@@ -103,5 +108,9 @@ __all__ = [
     "LCAGEUnlearner",
     "NRUUnlearner",
     "MWRPRepairer",
+    # Phase 3
+    "SAUGUnlearner",
+    "CausalUnlearner",
+    "BRFUUnlearner",
 ]
 

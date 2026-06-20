@@ -183,6 +183,21 @@ class ARMORConfig:
     mwrp_repair_epochs: int = 2             # Number of repair distillation epochs
     mwrp_repair_lr: float = 2e-5             # LR for selective repair distillation
 
+    # ── SAUG — Stackelberg Adversarial Unlearning Game ────────────────────────
+    saug_adv_steps: int = 2                 # Number of inner-loop adversarial auditor steps
+    saug_adv_lr: float = 5e-5               # Learning rate for the adversarial auditor
+    saug_coeff: float = 0.50                 # Adversarial loss weight for the unlearner
+
+    # ── CIU — Causal Interventional Unlearning ────────────────────────────────
+    ciu_num_nodes: int = 4                  # Number of top components to intervene on
+    ciu_threshold: float = 0.10             # ACE threshold for component intervention
+
+    # ── BRFU — Byzantine-Robust Federated Unlearning ──────────────────────────
+    brfu_num_clients: int = 3               # Simulated federated client count
+    brfu_byzantine_frac: float = 0.33       # Fraction of clients that are simulated Byzantine
+    brfu_aggregation: str = "krum"          # Server aggregation method: 'krum' or 'trimmed_mean'
+
+
 
     def __post_init__(self):
         if self.debug:

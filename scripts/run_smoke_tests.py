@@ -168,6 +168,22 @@ TESTS = [
         "cmd"    : ["python", "scripts/run_morphogenetic_repair.py",
                     "--debug", "--no-rouge", "--no-save"],
     },
+    # ── Phase 3: New Frontier Research Methods ────────────────────────────────
+    {
+        "name"   : "Phase 3: SAUG (Stackelberg Game)",
+        "cmd"    : ["python", "scripts/run_stackelberg_game.py",
+                    "--debug", "--no-rouge", "--no-save"],
+    },
+    {
+        "name"   : "Phase 3: CIU (Causal do-Calculus)",
+        "cmd"    : ["python", "scripts/run_causal_iu.py",
+                    "--debug", "--no-rouge", "--no-save"],
+    },
+    {
+        "name"   : "Phase 3: BRFU (Byzantine-Robust Federated)",
+        "cmd"    : ["python", "scripts/run_federated_robust.py",
+                    "--debug", "--no-rouge", "--no-save"],
+    },
 ]
 
 

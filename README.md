@@ -446,6 +446,53 @@ python scripts/run_morphogenetic_repair.py --debug --damage-threshold 0.01
 
 ---
 
+### 23. 🤝 SAUG — Stackelberg Adversarial Unlearning Game *(Phase 3 Novel)*
+
+A game-theoretic unlearning framework modeling unlearning as a Stackelberg game between the model (leader) and a downstream relearning auditor (follower).
+*   **The Gap**: Most unlearning methods assume a static auditor. A dynamic adversary can fine-tune (re-learn) on forget samples to recover the data.
+*   **How it works**:
+    1. **Auditor Training**: In each step, clones the current model and trains it for $K$ gradient steps to minimize forget-set loss (simulating a worst-case relearning attack).
+    2. **Minimax Optimization**: The unlearner updates global weights to minimize its own forget loss + retain loss, while maximizing the auditor's post-relearning loss:
+        $$L_{\text{SAUG}} = L_{\text{NPO}}(\text{forget}) + \lambda L_{\text{retain}} - \gamma L_{\text{auditor\_relearn}}$$
+    This guarantees the unlearned weights are Nash-optimal and robust to recovery.
+
+```bash
+python scripts/run_stackelberg_game.py --debug --adv-steps 2
+```
+
+---
+
+### 24. 🔍 CIU — Causal Interventional Unlearning via Do-Calculus *(Phase 3 Novel)*
+
+Surgical parameter unlearning utilizing Pearl's causal do-calculus and SCM models over hidden activation layers.
+*   **The Gap**: Attention attribution methods rely on simple correlation rather than direct causation.
+*   **How it works**:
+    1. **Causal Attribution**: Registers hooks to patch activations to 0, computing the Average Causal Effect (ACE) on forget loss:
+        $$ACE(L_i \to Y | X_f) = \mathbb{E}[L_{\text{forget}} | do(L_i = 0)] - \mathbb{E}[L_{\text{forget}} | \text{normal}]$$
+    2. **Surgical Weight Surgery**: Freezes all layers except the top $K$ blocks with the highest ACE, running unlearning updates restricted strictly to these causal sub-networks.
+
+```bash
+python scripts/run_causal_iu.py --debug --num-nodes 4
+```
+
+---
+
+### 25. 🛡️ BRFU — Byzantine-Robust Federated Unlearning *(Phase 3 Novel)*
+
+A secure, distributed unlearning framework resilient against malicious Byzantine clients.
+*   **The Gap**: Federated unlearning assumes honest clients, leaving models open to poisoned unlearning gradients designed to degrade utility or inject backdoors.
+*   **How it works**:
+    1. **Distributed Partitions**: Partitions the forget and retain datasets among multiple clients.
+    2. **Malicious Client Simulation**: Evaluates aggregation defenses against clients submitting scaled/noisy gradients.
+    3. **Robust Aggregation**: Implements **Krum** (geometrical neighbor clustering) and **Trimmed Mean** (coordinate-wise outlier exclusion) to discard Byzantine updates and compute a clean global parameter update.
+
+```bash
+python scripts/run_federated_robust.py --debug --aggregation krum
+```
+
+---
+
+
 ## 🔐 Enterprise Compliance Suite
 
 
@@ -714,10 +761,15 @@ python scripts/run_lcage.py                 --debug --no-rouge
 python scripts/run_reconsolidation.py       --debug --no-rouge
 python scripts/run_morphogenetic_repair.py  --debug --no-rouge
 
+# Phase 3: New Frontier Methods
+python scripts/run_stackelberg_game.py      --debug --no-rouge
+python scripts/run_causal_iu.py              --debug --no-rouge
+python scripts/run_federated_robust.py       --debug --no-rouge
+
 # Relearning attack
 python scripts/run_relearning_attack.py --debug --compare --original-acc 0.3983
 
-# Run all integration tests (27 tests)
+# Run all integration tests (30 tests)
 python scripts/run_smoke_tests.py
 
 ```
@@ -870,6 +922,9 @@ python scripts/test_api_client.py
 - [x] 🔗 **LCAGE** — Latent Concept Association Graph Erasure (closure suppression)
 - [x] 🧠 **NRU** — Neural Reconsolidation Unlearning (Recall-activation -> Amnestic erasure -> SAM)
 - [x] 🩹 **MWRP** — Morphogenetic Weight Regeneration Post-Unlearning (damaged weight repair)
+- [x] 🤝 **SAUG** — Stackelberg Adversarial Unlearning Game (adversarial minimax co-training)
+- [x] 🔍 **CIU** — Causal Interventional Unlearning via Do-Calculus (SCM layer surgery)
+- [x] 🛡️ **BRFU** — Byzantine-Robust Federated Unlearning (Krum / Trimmed Mean defense)
 - [ ] Full Mistral-7B / LLaMA-2-7B GPU results (run on Colab)
 - [ ] HuggingFace Hub model card upload
 - [ ] Real LLaVA-1.5-7b multimodal forward pass
