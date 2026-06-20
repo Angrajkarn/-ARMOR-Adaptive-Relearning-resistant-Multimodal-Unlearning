@@ -140,6 +140,30 @@ class ARMORConfig:
     lora_retain_r: int = 8                    # rank of retain LoRA (0 = disabled)
     lora_merge_final: bool = True             # merge adapters into base weights at end
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # PHASE 1 RESEARCH MODULES (added 2026-06)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    # ── CU-AR — Conformal Unlearning Verification ─────────────────────────────
+    conformal_alpha: float = 0.05             # max miscoverage rate (5%)
+    conformal_halflife_adj: bool = True       # use finite-sample adjusted quantile
+    conformal_retain_check_n: int = 100       # retain samples for sanity check
+
+    # ── CoT-HME — Chain-of-Thought Hidden Memory Erasure ──────────────────────
+    cot_loss_coeff: float = 0.30              # weight of CoT entropy loss
+    cot_leak_threshold: float = 0.30         # leakage threshold for step classification
+    cot_max_new_tokens: int = 128            # max tokens for CoT trace generation
+    cot_probe_batch: int = 20               # max samples probed per epoch
+    cot_keyword_weight: float = 0.60        # keyword score weight in leakage scorer
+    cot_semantic_weight: float = 0.40       # semantic score weight in leakage scorer
+    cot_reprobe_interval: int = 2           # re-probe every N epochs
+
+    # ── TKDU — Temporal Knowledge Decay Unlearning ────────────────────────────
+    tkdu_halflife_days: float = 30.0         # temporal decay half-life
+    tkdu_expired_threshold: float = 0.10    # validity below which fact is expired
+    tkdu_near_expiry_threshold: float = 0.50  # validity boundary for "near expiry"
+    tkdu_expiry_buffer_days: float = 0.0    # trigger unlearning before expiry
+
     def __post_init__(self):
         if self.debug:
             # Override to tiny model + minimal data for fast CPU smoke test

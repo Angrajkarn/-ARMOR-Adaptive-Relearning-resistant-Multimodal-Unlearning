@@ -18,9 +18,26 @@ from armor.eval.certificate import (         # Enterprise Expansion
     AuditCertificateGenerator,
 )
 
+# ── Phase 1 Research (2026-06) ────────────────────────────────────────────────
+from armor.eval.conformal_verify import (   # CU-AR — Conformal Unlearning
+    ConformalUnlearningVerifier,
+    NonconformityScorer,
+    ConformalCalibrator,
+    ConformalUnlearningReport,
+    ConformalCalibrationResult,
+    NonconformityResult,
+    conformal_unlearning_test,
+)
+from armor.eval.temporal_certificate import (  # TKDU — Temporal Certificates
+    TemporalComplianceCertificate,
+    TemporalCertificateGenerator,
+)
+
 __all__ = [
+    # Baseline
     "UnlearningEvaluator",
     "MembershipInferenceAuditor",
+    # Research Expansions
     "ZKVerifier",
     "UnlearningCommitment",
     "InfluenceEstimator",
@@ -28,4 +45,14 @@ __all__ = [
     "ContrastiveUnlearningLoss",
     "VisualMembershipTest",
     "AuditCertificateGenerator",
+    # Phase 1
+    "ConformalUnlearningVerifier",
+    "NonconformityScorer",
+    "ConformalCalibrator",
+    "ConformalUnlearningReport",
+    "ConformalCalibrationResult",
+    "NonconformityResult",
+    "conformal_unlearning_test",
+    "TemporalComplianceCertificate",
+    "TemporalCertificateGenerator",
 ]

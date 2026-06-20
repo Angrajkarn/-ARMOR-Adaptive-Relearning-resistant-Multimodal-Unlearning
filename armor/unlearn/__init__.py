@@ -34,6 +34,24 @@ from armor.unlearn.lora_unlearner import (       # Module 6 — Modular LoRA Unl
     NegativeLoRAApplicator,
 )
 
+# ── Phase 1 Research (2026-06) ────────────────────────────────────────────────
+from armor.unlearn.cot_hme import (             # CoT-HME — CoT Erasure
+    CoTHMEUnlearner,
+    CoTSampleBank,
+    CoTForgetSample,
+    compute_cot_entropy_loss,
+)
+from armor.unlearn.temporal_decay import (      # TKDU — Temporal Unlearning
+    TKDUUnlearner,
+    KnowledgeTimestamp,
+    TemporalValidityScorer,
+    TemporalUnlearningScheduler,
+    TemporalKnowledgeDataset,
+    create_demo_knowledge_registry,
+    load_knowledge_registry_from_json,
+    save_knowledge_registry_to_json,
+)
+
 __all__ = [
     # Baseline
     "GradientAscentUnlearner",
@@ -61,4 +79,17 @@ __all__ = [
     "LoRALayer",
     "LoRAInjector",
     "NegativeLoRAApplicator",
+    # Phase 1
+    "CoTHMEUnlearner",
+    "CoTSampleBank",
+    "CoTForgetSample",
+    "compute_cot_entropy_loss",
+    "TKDUUnlearner",
+    "KnowledgeTimestamp",
+    "TemporalValidityScorer",
+    "TemporalUnlearningScheduler",
+    "TemporalKnowledgeDataset",
+    "create_demo_knowledge_registry",
+    "load_knowledge_registry_from_json",
+    "save_knowledge_registry_to_json",
 ]

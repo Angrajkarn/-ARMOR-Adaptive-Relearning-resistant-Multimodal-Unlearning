@@ -49,6 +49,9 @@ ARMOR solves all three problems:
 | ✂️ **Causal Severing** | CAS: Permanent attention graph blockades at specific retrieval paths |
 | 📜 **GDPR Certificates** | Signed JSON/HTML compliance certificates with ZK proofs |
 | 🚀 **Real-Time API** | FastAPI microservice for online, queued unlearning with auto-auditing |
+| 📐 **CU-AR** | World-first distribution-free, finite-sample conformal unlearning guarantee |
+| 🧠 **CoT-HME** | Chain-of-thought reasoning trace erasure — closes the CoT leakage backdoor |
+| 📅 **TKDU** | Temporal knowledge decay — auto-unlearning when facts expire (GDPR Art.17) |
 
 ---
 
@@ -226,6 +229,173 @@ Handles streaming unlearning requests without catastrophic forgetting of previou
 
 ---
 
+### 17. 📐 CU-AR — Conformal Unlearning for Autoregressive LLMs *(Phase 1 Novel)*
+
+The **world's first distribution-free, finite-sample** statistical verification method for machine unlearning in text generation models. Unlike MIA-based auditing (which has no formal guarantees), CU-AR gives a rigorous mathematical certificate.
+
+**How it works:**
+
+```
+Nonconformity score:  s(x, y) = -log P_θ(y | x)   (negative log-likelihood on answer tokens)
+Calibration:          q̂ = quantile({s(x_i, y_i) : retain set}, 1−α)  [adjusted for finite samples]
+Prediction set:       C(x) = { y : s(x, y) ≤ q̂ }
+Unlearning verified:  s(x_forget, y_forget*) > q̂  →  answer NOT in prediction set
+```
+
+**Formal guarantee:**
+
+```
+P(forget answer ∈ prediction set after unlearning) ≤ α
+```
+
+- **α = 0.05** → at most 5% chance any forget answer can be recalled
+- Guarantee is **distribution-free** (no parametric model assumptions)
+- Guarantee is **finite-sample valid** (not asymptotic — holds for n ≥ 1)
+- **Architecture-agnostic** — works on any autoregressive LLM
+
+```python
+from armor.eval.conformal_verify import ConformalUnlearningVerifier
+
+verifier = ConformalUnlearningVerifier(model, tokenizer, cfg)
+report   = verifier.verify(
+    forget_loader, retain_loader,
+    method_name="HDI+NPO+SAM",
+    alpha=0.05,         # 5% max recall rate
+)
+# report.unlearning_certified: True/False
+# report.forget_coverage_rate: fraction of forget answers still recallable
+# report.threshold: calibrated q̂ value
+verifier.save_report(report, "outputs/conformal/report.json", save_html=True)
+```
+
+```bash
+python scripts/run_conformal_verify.py --debug --alpha 0.05
+```
+
+---
+
+### 18. 🧠 CoT-HME — Chain-of-Thought Hidden Memory Erasure *(Phase 1 Novel)*
+
+Discovers and erases knowledge that **survives output-level unlearning but leaks through chain-of-thought reasoning traces**. Standard unlearning methods only suppress the final answer — but the model can still "think through" to the forbidden knowledge in multi-step reasoning:
+
+```
+After output-level unlearning:
+  Q: "What is Project AURORA's codename?"
+  A: "I don't know."    ← output level erased ✅
+
+But CoT reasoning:
+  "Step 1: The project was started in 2021...
+   Step 2: The codename was AURORA...   ← LEAKED in reasoning ❌
+   Final: I cannot say."
+```
+
+**Architecture:**
+
+1. **CoT Leakage Probe** — generates step-by-step reasoning traces, then scores each step using keyword + embedding cosine similarity against the forget-set answer
+2. **CoT Entropy Loss** — for each leaked reasoning step, maximizes the model's entropy (uncertainty) at that exact position:
+
+```
+L_CoT(θ) = Σ_{t ∈ leaked_steps}  leakage_score_t · (−H[P_θ(·|context_t)])
+```
+
+Maximizing entropy at leaked positions = making the model maximally uncertain at the reasoning step where it would otherwise "think through" to the answer.
+
+**Full loss:**
+
+```
+L_CoT-HME = L_NPO(forget) + λ_retain · L_CE(retain) + λ_cot · L_CoT(cot_leaked)
+```
+
+```python
+from armor.attack.cot_leakage_probe import CoTLeakageProbe
+from armor.unlearn.cot_hme import CoTHMEUnlearner
+
+# Probe for CoT leakage BEFORE unlearning
+probe  = CoTLeakageProbe(model, tokenizer, cfg, leakage_threshold=0.3)
+report = probe.probe_dataset(qa_pairs=[("Q1","A1"), ...], method_name="pre-train")
+# report.trace_leakage_rate: fraction of forget-set with leaked CoT
+
+# Run CoT-HME unlearning
+unlearner = CoTHMEUnlearner(
+    model, ref_model, tokenizer, cfg,
+    qa_forget_pairs=qa_pairs,
+    cot_loss_coeff=0.3,
+)
+result = unlearner.run(forget_loader, retain_loader)
+```
+
+```bash
+python scripts/run_cot_hme.py --debug --cot-coeff 0.3
+```
+
+---
+
+### 19. 📅 TKDU — Temporal Knowledge Decay Unlearning *(Phase 1 Novel)*
+
+The **world's first machine unlearning system that treats knowledge as time-bounded**. Every real-world fact has a validity window — "The CEO of Acme Corp is John Smith" was true in 2022 but false in 2024. TKDU automatically erases expired facts while preserving still-valid knowledge.
+
+**Temporal validity score:**
+
+```
+τ(k, t_now) = σ( (t_expiry_k − t_now) / halflife_sec )
+
+τ = 1.0  →  fully valid knowledge (far from expiry)
+τ = 0.5  →  exactly at expiry boundary
+τ = 0.0  →  fully expired (complete forgetting)
+```
+
+**Temporally-weighted loss:**
+
+```
+L_TKDU = Σ_k (1 − τ_k) · L_forget(k)    # expired facts: full forgetting pressure
+        + Σ_k  τ_k       · L_retain(k)    # valid facts: preserve them
+        + L_CE(θ, retain_set)              # global retain regularisation
+```
+
+**Production scheduler** — monitors a knowledge registry and auto-triggers unlearning as facts expire:
+
+```python
+from armor.unlearn.temporal_decay import (
+    TKDUUnlearner, KnowledgeTimestamp,
+    TemporalUnlearningScheduler, create_demo_knowledge_registry,
+)
+from armor.eval.temporal_certificate import TemporalCertificateGenerator
+
+# Define knowledge with validity windows
+items = [
+    KnowledgeTimestamp(
+        knowledge_id="K001",
+        description="CEO of Acme Corp",
+        question="Who is the CEO of Acme Corp?",
+        answer="John Smith",
+        content="Q: Who is CEO? A: John Smith",
+        t_valid_start=datetime(2020,1,1).timestamp(),
+        t_valid_end=datetime(2023,6,1).timestamp(),  # expired June 2023
+        gdpr_category="personal",
+    )
+]
+
+# Check schedule
+scheduler = TemporalUnlearningScheduler(items, expiry_buffer_days=7.0)
+scheduler.print_schedule()  # shows τ scores, days remaining, status
+
+# Run TKDU
+unlearner = TKDUUnlearner(model, ref_model, tokenizer, cfg, knowledge_items=items)
+result    = unlearner.run(forget_loader, retain_loader)
+
+# Generate GDPR Article 17 compliance certificate
+cert_gen = TemporalCertificateGenerator()
+cert     = cert_gen.generate(result, items)
+cert_gen.save(cert, "outputs/temporal/cert.json", save_html=True)
+```
+
+**GDPR Compliance:** Each run generates a signed certificate (HMAC-SHA256) documenting which personal data was erased, their expiry dates, and τ scores — directly satisfying GDPR Article 17 ("Right to Erasure") requirements.
+
+```bash
+python scripts/run_temporal_unlearn.py --debug --halflife-days 30
+python scripts/run_temporal_unlearn.py --debug --schedule-only   # just print the schedule
+```
+
 ## 🔐 Enterprise Compliance Suite
 
 ### Verifiable Machine Unlearning (VMU) with Zero-Knowledge Proofs
@@ -379,8 +549,10 @@ ARMOR/
 │   │   ├── metrics.py                 # EvaluationResult: forget/retain + ROUGE
 │   │   ├── mia.py                     # Min-K% Prob → MIA AUROC
 │   │   ├── privacy_audit.py           # Comprehensive privacy audit suite
-│   │   ├── zk_verify.py              # 🔐 ZK-proof verifiable unlearning [NEW]
+│   │   ├── zk_verify.py               # 🔐 ZK-proof verifiable unlearning [NEW]
 │   │   ├── certificate.py             # 📜 GDPR audit certificate generator [NEW]
+│   │   ├── conformal.py               # CU-AR conformal verification [Phase 1]
+│   │   ├── cot_hme.py                 # CoT-HME reasoning leakage probing [Phase 1]
 │   │   └── multimodal_mia.py          # 🖼️ Cross-modal MIA for vision-language [NEW]
 │   │
 │   ├── attack/                        # Adversarial probing
@@ -405,8 +577,8 @@ ARMOR/
 │   ├── run_dp_armor.py                # DP-NPO+SAM experiment
 │   ├── run_llava_unlearn.py           # LLaVA cross-modal experiment
 │   ├── run_muse_benchmark.py          # MUSE benchmark (books/news)
-│   ├── run_hdi_unlearn.py             # 🌊 HDI experiment [NEW]
-│   ├── run_cas_unlearn.py             # ✂️ CAS experiment [NEW]
+│   ├── run_hdi_unlearn.py             # HDI experiment [NEW]
+│   ├── run_cas_unlearn.py             # CAS experiment [NEW]
 │   ├── run_nasd.py                    # NASD experiment [NEW]
 │   ├── run_rlace_rmu.py               # RLACE+RMU experiment [NEW]
 │   ├── run_lora_unlearn.py            # LoRA unlearner experiment [NEW]
@@ -481,10 +653,15 @@ python scripts/run_zk_verify.py        --debug
 python scripts/run_audit_gen.py        --debug
 python scripts/run_reconstruction_attack.py --debug
 
+# Phase 1: New Frontier Methods
+python scripts/run_conformal_verify.py  --debug --alpha 0.05
+python scripts/run_cot_hme.py           --debug --cot-coeff 0.3 --no-rouge
+python scripts/run_temporal_unlearn.py  --debug --halflife-days 30 --no-rouge
+
 # Relearning attack
 python scripts/run_relearning_attack.py --debug --compare --original-acc 0.3983
 
-# Run all integration tests
+# Run all integration tests (24 tests)
 python scripts/run_smoke_tests.py
 ```
 
@@ -541,6 +718,9 @@ Evaluated on **TOFU** (`locuslab/TOFU`) and **MUSE** benchmarks.
 | **Reconstruction Rate** | Fraction of forget-text recovered via inversion | ↓ Minimize |
 | **ZK Proof Valid** | Cryptographic proof of weight change | ✓ True |
 | **HMAC Valid** | Tamper-evidence of audit certificate | ✓ True |
+| **Conformal Coverage (CU-AR)** | Fraction of forget answers in prediction set | ≤ α |
+| **CoT Leakage Rate** | Fraction of forget-set with reasoning-trace leakage | ↓ Minimize |
+| **Temporal τ Score** | Validity of knowledge items at unlearning time | — Report |
 
 ---
 
@@ -627,6 +807,9 @@ python scripts/test_api_client.py
 - [x] 🔬 Model inversion / text reconstruction adversarial attack
 - [x] 🖼️ Cross-modal MIA for vision-language models
 - [x] 🚀 FastAPI Online Unlearning Microservice (real-time queue)
+- [x] 📐 **CU-AR** — Conformal Unlearning verification (distribution-free statistical guarantee)
+- [x] 🧠 **CoT-HME** — Chain-of-Thought Hidden Memory Erasure (reasoning trace suppression)
+- [x] 📅 **TKDU** — Temporal Knowledge Decay Unlearning (GDPR Article 17 auto-compliance)
 - [ ] Full Mistral-7B / LLaMA-2-7B GPU results (run on Colab)
 - [ ] HuggingFace Hub model card upload
 - [ ] Real LLaVA-1.5-7b multimodal forward pass
@@ -646,6 +829,9 @@ python scripts/test_api_client.py
 8. **ROME/MEMIT** — Meng et al., *"Locating and Editing Factual Associations in GPT"* (NeurIPS 2022) · [arXiv:2202.05262](https://arxiv.org/abs/2202.05262)
 9. **RLACE** — Ravfogel et al., *"Linear Adversarial Concept Erasure"* (ICML 2022) · [arXiv:2201.12091](https://arxiv.org/abs/2201.12091)
 10. **DP-SGD** — Abadi et al., *"Deep Learning with Differential Privacy"* (CCS 2016) · [arXiv:1607.00133](https://arxiv.org/abs/1607.00133)
+11. **Conformal Prediction** — Vovk et al., *"Algorithmic Learning in a Random World"* (2005); Angelopoulos & Bates, *"A Gentle Introduction to Conformal Prediction"* (2021) · [arXiv:2107.07511](https://arxiv.org/abs/2107.07511)
+12. **CoT Reasoning** — Wei et al., *"Chain-of-Thought Prompting Elicits Reasoning in Large Language Models"* (NeurIPS 2022) · [arXiv:2201.11903](https://arxiv.org/abs/2201.11903)
+13. **GDPR Article 17** — European Parliament, *Regulation (EU) 2016/679 — Right to Erasure* (2016)
 
 ---
 

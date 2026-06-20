@@ -5,6 +5,17 @@ from armor.attack.prompt_attack    import PromptInjectionAttack, PromptAttackRes
 from armor.attack.federated_attack import FederatedRelearningAttack, FederatedAttackResult
 from armor.attack.reconstruction   import TextReconstructionAttack, ReconstructionAttackResult
 
+# ── Phase 1 Research (2026-06) ────────────────────────────────────────────────
+from armor.attack.cot_leakage_probe import (  # CoT-HME — Leakage Detection
+    CoTLeakageProbe,
+    CoTLeakageScorer,
+    CoTLeakageResult,
+    CoTLeakageReport,
+    CoTStep,
+    build_cot_prompt,
+    segment_cot_trace,
+)
+
 __all__ = [
     "RelearningAttack",
     "LoRALinear",
@@ -15,4 +26,12 @@ __all__ = [
     "FederatedAttackResult",
     "TextReconstructionAttack",
     "ReconstructionAttackResult",
+    # Phase 1
+    "CoTLeakageProbe",
+    "CoTLeakageScorer",
+    "CoTLeakageResult",
+    "CoTLeakageReport",
+    "CoTStep",
+    "build_cot_prompt",
+    "segment_cot_trace",
 ]

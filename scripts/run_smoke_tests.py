@@ -134,6 +134,24 @@ TESTS = [
         "cmd"    : ["python", "scripts/run_audit_gen.py",
                     "--debug", "--probe-samples", "4"],
     },
+    # ── Phase 1: New Frontier Research Methods ────────────────────────────────
+    {
+        "name"   : "Phase 1: CU-AR (Conformal Unlearning Verification)",
+        "cmd"    : ["python", "scripts/run_conformal_verify.py",
+                    "--debug", "--no-save", "--alpha", "0.10"],
+    },
+    {
+        "name"   : "Phase 1: CoT-HME (Chain-of-Thought Erasure)",
+        "cmd"    : ["python", "scripts/run_cot_hme.py",
+                    "--debug", "--no-rouge", "--no-save",
+                    "--cot-coeff", "0.2", "--cot-max-tokens", "24"],
+    },
+    {
+        "name"   : "Phase 1: TKDU (Temporal Knowledge Decay)",
+        "cmd"    : ["python", "scripts/run_temporal_unlearn.py",
+                    "--debug", "--no-rouge", "--no-save",
+                    "--halflife-days", "1.0"],
+    },
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
