@@ -100,8 +100,10 @@ class LoRALayer(nn.Module):
         out_features = linear.out_features
 
         # LoRA matrices A and B
-        self.lora_A  = nn.Parameter(torch.empty(rank, in_features))
-        self.lora_B  = nn.Parameter(torch.zeros(out_features, rank))
+        device = linear.weight.device
+        dtype  = linear.weight.dtype
+        self.lora_A  = nn.Parameter(torch.empty(rank, in_features, device=device, dtype=dtype))
+        self.lora_B  = nn.Parameter(torch.zeros(out_features, rank, device=device, dtype=dtype))
 
         # Kaiming init for A (B starts at zero → no effect at init)
         nn.init.kaiming_uniform_(self.lora_A, a=math.sqrt(5))
@@ -388,7 +390,7 @@ class LoRAUnlearner:
         history = {}
 
         # ── Step 1: Train forget LoRA ───────────────────────────────────────
-        print("\n[LoRA] ═══ Step 1: Training forget adapter ═══")
+        print("\n[LoRA] === Step 1: Training forget adapter ===")
         forget_injector = LoRAInjector(
             self.model,
             rank       = self.cfg.lora_unlearn_r,
@@ -404,7 +406,7 @@ class LoRAUnlearner:
             k: float(v.norm()) for k, v in forget_delta.items()}
 
         # ── Step 2: Remove forget adapter + subtract from base ──────────────
-        print("\n[LoRA] ═══ Step 2: Applying negative adapter ═══")
+        print("\n[LoRA] === Step 2: Applying negative adapter ===")
         forget_injector.remove_and_restore()   # restores original Linear layers
 
         n_modified = NegativeLoRAApplicator.apply(
@@ -417,7 +419,7 @@ class LoRAUnlearner:
 
         # ── Step 3 (optional): Train retain LoRA and add back ───────────────
         if retain_loader is not None and self.cfg.lora_retain_r > 0:
-            print("\n[LoRA] ═══ Step 3: Training retain adapter ═══")
+            print("\n[LoRA] === Step 3: Training retain adapter ===")
             retain_injector = LoRAInjector(
                 self.model,
                 rank       = self.cfg.lora_retain_r,
@@ -430,7 +432,7 @@ class LoRAUnlearner:
                 retain_injector, label="retain", negate_loss=False)
 
             # ADD the retain delta back: W += Δ_retain
-            print("\n[LoRA] ═══ Step 3b: Adding retain delta ═══")
+            print("\n[LoRA] === Step 3b: Adding retain delta ===")
             retain_injector.remove_and_restore()
             NegativeLoRAApplicator.apply(
                 self.model, retain_delta,

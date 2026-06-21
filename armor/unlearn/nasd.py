@@ -93,7 +93,7 @@ class NeuroApoptoticDecay:
         """
         Identify the apoptotic subnetwork and attach autonomous decay hooks.
         """
-        print("\n[NASD] ═══ Phase 1: Identifying Apoptotic Subnetwork ═══")
+        print("\n[NASD] === Phase 1: Identifying Apoptotic Subnetwork ===")
         
         print("[NASD] Analyzing Forget Set...")
         fim_forget = self.compute_fisher(forget_loader)
@@ -128,7 +128,7 @@ class NeuroApoptoticDecay:
         print(f"[NASD] Subnetwork identified: {decay_params:,} / {total_params:,} parameters "
               f"({decay_params/max(1,total_params):.2%}) marked for apoptosis.")
               
-        print("\n[NASD] ═══ Phase 2: Injecting Decay Hooks ═══")
+        print("\n[NASD] === Phase 2: Injecting Decay Hooks ===")
         self._attach_hooks(masks)
         
     def _attach_hooks(self, masks: Dict[str, torch.Tensor]):

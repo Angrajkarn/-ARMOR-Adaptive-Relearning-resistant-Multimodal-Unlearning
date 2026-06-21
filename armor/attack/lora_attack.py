@@ -50,8 +50,10 @@ class LoRALinear(nn.Module):
         out_features  = linear.out_features
 
         # LoRA decomposition: ΔW = B @ A
-        self.lora_A = nn.Parameter(torch.randn(rank, in_features)  * 0.01)
-        self.lora_B = nn.Parameter(torch.zeros(out_features, rank))
+        device = linear.weight.device
+        dtype  = linear.weight.dtype
+        self.lora_A = nn.Parameter(torch.randn(rank, in_features, device=device, dtype=dtype) * 0.01)
+        self.lora_B = nn.Parameter(torch.zeros(out_features, rank, device=device, dtype=dtype))
 
         # Freeze the base weight
         self.linear.weight.requires_grad_(False)

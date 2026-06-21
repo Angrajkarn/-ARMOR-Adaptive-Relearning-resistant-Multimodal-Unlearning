@@ -119,9 +119,9 @@ def main():
 
     if args.compare:
         # ── Side-by-side comparison ─────────────────────────────────────────────
-        print("\n" + "═" * 70)
+        print("\n" + "=" * 70)
         print("  ARMOR — Relearning Attack Comparison: GA vs NPO vs NPO+SAM")
-        print("═" * 70)
+        print("=" * 70)
 
         results = {}
         for name, ckpt in [("GA",       args.ga_checkpoint),

@@ -304,8 +304,8 @@ class ContinualUnlearner:
         history dict with loss curves
         """
         self._request_count += 1
-        print(f"\n[Continual] ═══ Request #{self._request_count} "
-              f"(request_id={request_id}) ═══")
+        print(f"\n[Continual] === Request #{self._request_count} "
+              f"(request_id={request_id}) ===")
 
         # Step 1 — Seed replay buffer on first request; update on subsequent
         self._populate_buffer(retain_loader)

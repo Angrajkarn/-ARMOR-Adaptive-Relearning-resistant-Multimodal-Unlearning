@@ -311,7 +311,7 @@ class ZKVerifier:
         Call BEFORE unlearning.
         Stores commitment and pre-unlearning influence scores.
         """
-        print("\n[ZK] ═══ Phase 1: Pre-unlearning Commitment ═══")
+        print("\n[ZK] === Phase 1: Pre-unlearning Commitment ===")
         self._pre_commit = UnlearningCommitment.create(
             model, forget_loader, method)
         print(f"[ZK] Commitment: {self._pre_commit['commitment'][:16]}...")
@@ -338,7 +338,7 @@ class ZKVerifier:
         if self._pre_commit is None:
             raise RuntimeError("Call commit_pre() before verify_post()")
 
-        print("\n[ZK] ═══ Phase 2: Post-unlearning Verification ═══")
+        print("\n[ZK] === Phase 2: Post-unlearning Verification ===")
 
         # Post-commitment
         post_commit = UnlearningCommitment.create(
@@ -375,12 +375,12 @@ class ZKVerifier:
         mean_gap         = sum(influence_gaps) / max(len(influence_gaps), 1)
         verdict          = "VERIFIED ✓" if overall_verified else "PARTIAL ⚠"
 
-        print(f"\n[ZK] ════════════════════════════════")
+        print(f"\n[ZK] ==================================")
         print(f"[ZK] AUDIT RESULT: {verdict}")
         print(f"[ZK] Verified: {n_verified}/{n_samples} forget samples")
         print(f"[ZK] Mean influence gap: {mean_gap:.4f} "
               f"(threshold={threshold})")
-        print(f"[ZK] ════════════════════════════════")
+        print(f"[ZK] ==================================")
 
         report = {
             "verdict":          verdict,

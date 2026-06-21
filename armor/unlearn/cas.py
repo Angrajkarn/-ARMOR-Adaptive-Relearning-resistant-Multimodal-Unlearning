@@ -83,7 +83,7 @@ class CausalAttentionSevering:
         """
         Executes the Causal Attention Severing protocol.
         """
-        print("\n[CAS] ═══ Causal Attention Severing ═══")
+        print("\n[CAS] === Causal Attention Severing ===")
         
         targets = self._find_target_modules()
         print(f"[CAS] Identified {len(targets)} attention projection layers.")

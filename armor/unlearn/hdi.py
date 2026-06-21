@@ -84,7 +84,7 @@ class HolographicInterference:
         """
         Executes the Holographic Destructive Interference protocol.
         """
-        print("\n[HDI] ═══ Holographic Destructive Interference ═══")
+        print("\n[HDI] === Holographic Destructive Interference ===")
         
         targets = self._find_target_modules()
         print(f"[HDI] Identified {len(targets)} target layers for projection.")

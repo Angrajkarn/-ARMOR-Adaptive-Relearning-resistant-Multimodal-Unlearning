@@ -344,7 +344,7 @@ class MultimodalMIAEvaluator:
         """
         Run both text MIA and visual MIA on forget + retain sets.
         """
-        print(f"\n[MM-MIA] ═══ Running MIA Audit {label} ═══")
+        print(f"\n[MM-MIA] === Running MIA Audit {label} ===")
 
         # Text-only MIA
         text_results_obj = self.text_mia.audit(forget_loader, retain_loader, method_name=label)
