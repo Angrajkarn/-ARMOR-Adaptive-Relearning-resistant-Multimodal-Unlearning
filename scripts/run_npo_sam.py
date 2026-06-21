@@ -82,9 +82,10 @@ class NPOSAMUnlearner:
         self.sam_rho   = sam_rho
 
         # Freeze reference model
-        for p in ref_model.parameters():
-            p.requires_grad_(False)
-        ref_model.eval()
+        if ref_model is not model:
+            for p in ref_model.parameters():
+                p.requires_grad_(False)
+            ref_model.eval()
 
         # SAM wraps AdamW
         base_optimizer = AdamW(
@@ -112,9 +113,15 @@ class NPOSAMUnlearner:
             self.model, input_ids, attn_mask, labels
         )
         with torch.no_grad():
-            ref_log_probs = compute_token_log_probs(
-                self.ref_model, input_ids, attn_mask, labels
-            )
+            if self.ref_model is self.model:
+                with self.model.disable_adapter():
+                    ref_log_probs = compute_token_log_probs(
+                        self.model, input_ids, attn_mask, labels
+                    )
+            else:
+                ref_log_probs = compute_token_log_probs(
+                    self.ref_model, input_ids, attn_mask, labels
+                )
 
         log_ratio = policy_log_probs - ref_log_probs
         npo_loss  = -F.logsigmoid(self.cfg.npo_beta * log_ratio).mean()

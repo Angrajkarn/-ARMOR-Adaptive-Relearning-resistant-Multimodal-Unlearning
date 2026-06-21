@@ -87,7 +87,11 @@ class CrossModalNPOSAMUnlearner:
     def _npo_loss(self, f_batch):
         out_cur = self._forward(self.model, f_batch)
         with torch.no_grad():
-            out_ref = self._forward(self.ref_model, f_batch)
+            if self.ref_model is self.model:
+                with self.model.disable_adapter():
+                    out_ref = self._forward(self.model, f_batch)
+            else:
+                out_ref = self._forward(self.ref_model, f_batch)
         log_ratio = out_cur.loss - out_ref.loss
         return -F.logsigmoid(-self.beta_npo * log_ratio).mean()
 
@@ -117,9 +121,10 @@ class CrossModalNPOSAMUnlearner:
         import time
 
         self.model.train()
-        self.ref_model.eval()
-        for p in self.ref_model.parameters():
-            p.requires_grad_(False)
+        if self.ref_model is not self.model:
+            self.ref_model.eval()
+            for p in self.ref_model.parameters():
+                p.requires_grad_(False)
 
         optimizer = torch.optim.AdamW(
             self.model.parameters(), lr=self.cfg.unlearn_lr)
