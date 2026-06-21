@@ -151,9 +151,10 @@ class RMUUnlearner:
               retain_loader: DataLoader) -> Dict[str, Any]:
         """Run RMU training and return loss history."""
         self.model.train()
-        self.ref_model.eval()
-        for p in self.ref_model.parameters():
-            p.requires_grad_(False)
+        if self.ref_model is not self.model:
+            self.ref_model.eval()
+            for p in self.ref_model.parameters():
+                p.requires_grad_(False)
 
         # ── Optimiser ──────────────────────────────────────────────────────
         optimizer = torch.optim.AdamW(
@@ -200,8 +201,13 @@ class RMUUnlearner:
                 h_retain = model_extractor.hidden_state
 
                 with torch.no_grad():
-                    self.ref_model(input_ids=r_ids, attention_mask=r_mask)
-                    h_ref = ref_extractor.hidden_state.detach()
+                    if self.ref_model is self.model:
+                        with self.model.disable_adapter():
+                            self.model(input_ids=r_ids, attention_mask=r_mask)
+                            h_ref = ref_extractor.hidden_state.detach()
+                    else:
+                        self.ref_model(input_ids=r_ids, attention_mask=r_mask)
+                        h_ref = ref_extractor.hidden_state.detach()
 
                 retain_loss = F.mse_loss(h_retain, h_ref.to(device=h_retain.device, dtype=h_retain.dtype))
 

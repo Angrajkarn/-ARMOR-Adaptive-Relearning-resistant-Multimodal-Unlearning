@@ -49,9 +49,10 @@ class LCAGEUnlearner:
         self.device = cfg.device
 
         # Freeze reference model
-        for p in ref_model.parameters():
-            p.requires_grad_(False)
-        ref_model.eval()
+        if ref_model is not model:
+            for p in ref_model.parameters():
+                p.requires_grad_(False)
+            ref_model.eval()
 
         if optimizer is None:
             self.optimizer = AdamW(
@@ -133,7 +134,11 @@ class LCAGEUnlearner:
 
         policy_lp = compute_token_log_probs(self.model, input_ids, attn_mask, labels)
         with torch.no_grad():
-            ref_lp = compute_token_log_probs(self.ref_model, input_ids, attn_mask, labels)
+            if self.ref_model is self.model:
+                with self.model.disable_adapter():
+                    ref_lp = compute_token_log_probs(self.model, input_ids, attn_mask, labels)
+            else:
+                ref_lp = compute_token_log_probs(self.ref_model, input_ids, attn_mask, labels)
 
         log_ratio = policy_lp - ref_lp
         return -F.logsigmoid(self.cfg.npo_beta * log_ratio).mean()

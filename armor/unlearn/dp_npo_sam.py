@@ -150,8 +150,13 @@ class DPNPOSAMUnlearner:
 
         out_cur = self.model(input_ids=ids, attention_mask=mask, labels=labs)
         with torch.no_grad():
-            out_ref = self.ref_model(input_ids=ids, attention_mask=mask,
-                                     labels=labs)
+            if self.ref_model is self.model:
+                with self.model.disable_adapter():
+                    out_ref = self.model(input_ids=ids, attention_mask=mask,
+                                         labels=labs)
+            else:
+                out_ref = self.ref_model(input_ids=ids, attention_mask=mask,
+                                         labels=labs)
         log_ratio = out_cur.loss - out_ref.loss
         return -F.logsigmoid(-self.beta_npo * log_ratio).mean()
 
@@ -189,9 +194,10 @@ class DPNPOSAMUnlearner:
             n_samples : total dataset size (for privacy accounting)
         """
         self.model.train()
-        self.ref_model.eval()
-        for p in self.ref_model.parameters():
-            p.requires_grad_(False)
+        if self.ref_model is not self.model:
+            self.ref_model.eval()
+            for p in self.ref_model.parameters():
+                p.requires_grad_(False)
 
         optimizer = torch.optim.AdamW(
             self.model.parameters(),

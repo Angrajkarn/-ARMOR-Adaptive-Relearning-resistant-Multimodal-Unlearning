@@ -88,7 +88,11 @@ class MultiTaskNPOUnlearner:
 
         # Reference model log-probs (frozen)
         with torch.no_grad():
-            out_ref = ref_model(input_ids=ids, attention_mask=mask, labels=labs)
+            if ref_model is self.model:
+                with self.model.disable_adapter():
+                    out_ref = self.model(input_ids=ids, attention_mask=mask, labels=labs)
+            else:
+                out_ref = ref_model(input_ids=ids, attention_mask=mask, labels=labs)
 
         log_ratio = out_cur.loss - out_ref.loss   # positive = model knows more
         loss_npo  = -F.logsigmoid(-self.beta_npo * log_ratio).mean()
@@ -126,9 +130,10 @@ class MultiTaskNPOUnlearner:
         weights = self.task_weights or [1.0 / K] * K
 
         self.model.train()
-        self.ref_model.eval()
-        for p in self.ref_model.parameters():
-            p.requires_grad_(False)
+        if self.ref_model is not self.model:
+            self.ref_model.eval()
+            for p in self.ref_model.parameters():
+                p.requires_grad_(False)
 
         optimizer = torch.optim.AdamW(
             self.model.parameters(),

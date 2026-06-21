@@ -349,9 +349,10 @@ class RLACERMUUnlearner:
         model  = self.model
         device = self.device
         model.train()
-        self.ref_model.eval()
-        for p in self.ref_model.parameters():
-            p.requires_grad_(False)
+        if self.ref_model is not self.model:
+            self.ref_model.eval()
+            for p in self.ref_model.parameters():
+                p.requires_grad_(False)
 
         optimizer = torch.optim.AdamW(
             model.parameters(),
@@ -409,7 +410,11 @@ class RLACERMUUnlearner:
 
                 retain_loss = torch.tensor(0.0, device=device)
                 with torch.no_grad():
-                    self.ref_model(input_ids=r_ids, attention_mask=r_mask)
+                    if self.ref_model is self.model:
+                        with self.model.disable_adapter():
+                            self.model(input_ids=r_ids, attention_mask=r_mask)
+                    else:
+                        self.ref_model(input_ids=r_ids, attention_mask=r_mask)
 
                 for L in self.target_layers:
                     h_retain = model_extractors[L].hidden_state
