@@ -48,6 +48,15 @@ def parse_args():
 
 def main():
     args = parse_args()
+
+    # Set up stdout/stderr encoding wrapper for Windows to prevent charmap errors
+    if sys.platform == "win32":
+        try:
+            sys.stdout.reconfigure(encoding='utf-8')
+            sys.stderr.reconfigure(encoding='utf-8')
+        except Exception:
+            pass
+
     cfg = ARMORConfig(
         debug=args.debug,
         model_key=args.model if not args.debug else "debug",
