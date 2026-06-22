@@ -200,7 +200,7 @@ class DPNPOSAMUnlearner:
                 p.requires_grad_(False)
 
         optimizer = torch.optim.AdamW(
-            self.model.parameters(),
+            filter(lambda p: p.requires_grad, self.model.parameters()),
             lr=self.cfg.unlearn_lr,
             weight_decay=self.cfg.weight_decay)
 

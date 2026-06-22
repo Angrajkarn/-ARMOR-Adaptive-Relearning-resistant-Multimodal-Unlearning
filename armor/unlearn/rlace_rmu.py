@@ -355,7 +355,7 @@ class RLACERMUUnlearner:
                 p.requires_grad_(False)
 
         optimizer = torch.optim.AdamW(
-            model.parameters(),
+            filter(lambda p: p.requires_grad, model.parameters()),
             lr=cfg.unlearn_lr,
             weight_decay=cfg.weight_decay)
 
