@@ -4,26 +4,30 @@ armor/unlearn/multitask_npo.py
 Multi-Task NPO — simultaneously forget K disjoint topics.
 
 Challenge: naive multi-task unlearning causes gradient interference:
-    ∇L_forget_A ⊥̸ ∇L_forget_B → one task's update degrades the other.
+    nabla L_forget_A is not perpendicular to nabla L_forget_B
 
 Solution: per-task gradient projection onto orthogonal subspaces.
 
 Algorithm per step:
-    For each task k ∈ {1..K}:
-        g_k = ∇ L_NPO(D_forget^k)         # task k forget gradient
-        g_k_ortho = g_k − Σ_{j<k} proj(g_k, g_j)  # project out previous tasks
+    For each task k in {1..K}:
+        g_k = nabla L_NPO(D_forget^k)
+        g_k_ortho = g_k - sum_{j<k} proj(g_k, g_j)
 
     Combined update:
-        θ ← θ − η · (Σ_k w_k · g_k_ortho + β · ∇L_retain)
+        theta <- theta - eta * (sum_k w_k * g_k_ortho + beta * nabla L_retain)
 
 Use cases:
     - Forget multiple authors simultaneously
     - Forget multiple sensitive topics (e.g., harmful instructions + PII)
     - Multi-domain unlearning (MUSE: books + news)
+
+Memory note:
+    Gradients are stored as per-parameter lists (not a single flat tensor).
+    Flattening 81.9M params into a 330MB tensor 3x per step caused OOM/segfault
+    on Windows. Per-param storage avoids this entirely.
 """
 
 import time
-import copy
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
@@ -34,18 +38,42 @@ from typing import List, Dict, Any, Optional
 from ..config import ARMORConfig
 
 
-def project_out(v: torch.Tensor, basis: List[torch.Tensor],
-                eps: float = 1e-8) -> torch.Tensor:
+# ──────────────────────────────────────────────────────────────────────────────
+# Per-parameter Gram-Schmidt helpers (no flat tensor allocation)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _dot_per_param(grads_a: List[torch.Tensor],
+                   grads_b: List[torch.Tensor]) -> float:
+    """Dot product across per-parameter gradient lists."""
+    return sum((a * b).sum().item() for a, b in zip(grads_a, grads_b))
+
+
+def _norm_sq_per_param(grads: List[torch.Tensor]) -> float:
+    """Squared norm across per-parameter gradient lists."""
+    return sum((g * g).sum().item() for g in grads)
+
+
+def project_out_per_param(v: List[torch.Tensor],
+                           basis: List[List[torch.Tensor]],
+                           eps: float = 1e-8) -> List[torch.Tensor]:
     """
-    Remove components of v along all vectors in basis (Gram-Schmidt step).
-    v_ortho = v − Σ_u (v·u / ‖u‖²) · u
+    Remove components of v along all gradient lists in basis (Gram-Schmidt).
+    Works entirely in per-parameter space — no flat tensor allocation.
     """
-    result = v.clone()
+    result = [g.clone() for g in v]
     for u in basis:
-        norm2 = (u * u).sum().clamp(min=eps)
-        result = result - ((result * u).sum() / norm2) * u
+        norm2 = _norm_sq_per_param(u)
+        if norm2 < eps:
+            continue
+        dot = _dot_per_param(result, u)
+        scale = dot / norm2
+        result = [r - scale * ui for r, ui in zip(result, u)]
     return result
 
+
+# ──────────────────────────────────────────────────────────────────────────────
+# MultiTaskNPOUnlearner
+# ──────────────────────────────────────────────────────────────────────────────
 
 class MultiTaskNPOUnlearner:
     """
@@ -64,8 +92,8 @@ class MultiTaskNPOUnlearner:
                  ref_model:    PreTrainedModel,
                  tokenizer:    PreTrainedTokenizer,
                  task_names:   Optional[List[str]] = None,
-                 beta_npo:     float = 0.1,    # NPO log-ratio strength
-                 beta_retain:  float = 1.0,    # Retain loss weight
+                 beta_npo:     float = 0.1,
+                 beta_retain:  float = 1.0,
                  task_weights: Optional[List[float]] = None):
         self.cfg          = cfg
         self.model        = model
@@ -83,10 +111,8 @@ class MultiTaskNPOUnlearner:
         mask = batch.get("attention_mask",
                          torch.ones_like(ids)).to(self.cfg.device)
 
-        # Current model log-probs
         out_cur = self.model(input_ids=ids, attention_mask=mask, labels=labs)
 
-        # Reference model log-probs (frozen)
         with torch.no_grad():
             if ref_model is self.model:
                 with self.model.disable_adapter():
@@ -94,39 +120,41 @@ class MultiTaskNPOUnlearner:
             else:
                 out_ref = ref_model(input_ids=ids, attention_mask=mask, labels=labs)
 
-        log_ratio = out_cur.loss - out_ref.loss   # positive = model knows more
+        log_ratio = out_cur.loss - out_ref.loss
         loss_npo  = -F.logsigmoid(-self.beta_npo * log_ratio).mean()
         return loss_npo
 
-    def _flat_grad(self) -> torch.Tensor:
-        """Flatten all parameter gradients into a single vector."""
-        target_device = next(self.model.parameters()).device
-        return torch.cat([
-            p.grad.view(-1).to(target_device) if p.grad is not None
-            else torch.zeros(p.numel(), device=target_device)
-            for p in self.model.parameters()
-        ])
-
-    def _set_grad_from_flat(self, flat_grad: torch.Tensor):
-        """Write a flat gradient vector back to model.parameters()."""
-        idx = 0
+    def _capture_grads(self) -> List[torch.Tensor]:
+        """
+        Capture per-parameter gradients as a list of cloned tensors.
+        Never allocates a single flat tensor — avoids Windows OOM/segfault.
+        """
+        grads = []
         for p in self.model.parameters():
-            n = p.numel()
-            p.grad = flat_grad[idx:idx+n].view_as(p).to(p.device).clone()
-            idx += n
+            if p.grad is not None:
+                grads.append(p.grad.detach().clone())
+            else:
+                grads.append(torch.zeros_like(p))
+        return grads
+
+    def _apply_grads(self, grads: List[torch.Tensor]):
+        """Write per-parameter gradient list back to model in-place."""
+        for p, g in zip(self.model.parameters(), grads):
+            if p.grad is None:
+                p.grad = torch.zeros_like(p)
+            p.grad.copy_(g)
 
     def train(self,
               forget_loaders: List[DataLoader],
               retain_loader:  DataLoader) -> Dict[str, Any]:
         """
-        Run multi-task NPO with orthogonal gradient projection.
+        Run multi-task NPO with per-parameter orthogonal gradient projection.
 
-        Args:
-            forget_loaders: One DataLoader per topic to forget (K loaders)
-            retain_loader:  Single retain DataLoader
+        Gradient storage uses per-parameter lists (not flat tensors) to
+        avoid memory exhaustion crashes on Windows with large models.
         """
         K = len(forget_loaders)
-        names = self.task_names or [f"Task_{k}" for k in range(K)]
+        names   = self.task_names   or [f"Task_{k}" for k in range(K)]
         weights = self.task_weights or [1.0 / K] * K
 
         self.model.train()
@@ -136,7 +164,7 @@ class MultiTaskNPOUnlearner:
                 p.requires_grad_(False)
 
         optimizer = torch.optim.AdamW(
-            self.model.parameters(),
+            filter(lambda p: p.requires_grad, self.model.parameters()),
             lr=self.cfg.unlearn_lr,
             weight_decay=self.cfg.weight_decay)
 
@@ -147,7 +175,6 @@ class MultiTaskNPOUnlearner:
         history["retain"] = []
         t0 = time.time()
 
-        # Zip all loaders together (iterate until shortest is exhausted)
         n_steps_per_epoch = min(len(ld) for ld in forget_loaders)
 
         for epoch in range(1, self.cfg.unlearn_epochs + 1):
@@ -155,7 +182,7 @@ class MultiTaskNPOUnlearner:
             epoch_retain = 0.0
             n_steps = 0
 
-            iters = [iter(ld) for ld in forget_loaders]
+            iters       = [iter(ld) for ld in forget_loaders]
             retain_iter = iter(retain_loader)
 
             pbar = tqdm(range(n_steps_per_epoch),
@@ -163,7 +190,7 @@ class MultiTaskNPOUnlearner:
 
             for _ in pbar:
                 optimizer.zero_grad()
-                task_grads = []   # store flat grad per task
+                task_grads: List[List[torch.Tensor]] = []
 
                 # ── Per-task NPO gradient ──────────────────────────────────
                 for k, (it, name) in enumerate(zip(iters, names)):
@@ -176,25 +203,30 @@ class MultiTaskNPOUnlearner:
                     loss_k = self._npo_loss(batch, self.ref_model)
                     loss_k.backward()
 
-                    g_k = self._flat_grad()
+                    g_k = self._capture_grads()   # per-param list, no flat tensor
                     task_grads.append(g_k)
                     epoch_losses[name] += loss_k.item()
                     optimizer.zero_grad()
 
-                # ── Orthogonal projection ──────────────────────────────────
-                # Remove interference between task gradients
-                ortho_grads = []
-                basis = []
-                for k, g in enumerate(task_grads):
-                    g_ortho = project_out(g, basis)
+                # ── Orthogonal projection (per-parameter Gram-Schmidt) ──────
+                ortho_grads: List[List[torch.Tensor]] = []
+                basis: List[List[torch.Tensor]] = []
+                for g in task_grads:
+                    g_ortho = project_out_per_param(g, basis)
                     ortho_grads.append(g_ortho)
-                    if g_ortho.norm() > 1e-6:
-                        basis.append(g_ortho / g_ortho.norm())
+                    norm_sq = _norm_sq_per_param(g_ortho)
+                    if norm_sq > 1e-12:
+                        scale = norm_sq ** 0.5
+                        basis.append([gi / scale for gi in g_ortho])
 
                 # ── Weighted sum of orthogonal gradients ───────────────────
-                combined = torch.zeros_like(ortho_grads[0])
+                n_params = len(list(self.model.parameters()))
+                combined: List[torch.Tensor] = [
+                    torch.zeros_like(p) for p in self.model.parameters()
+                ]
                 for w, g in zip(weights, ortho_grads):
-                    combined += w * g
+                    for i, gi in enumerate(g):
+                        combined[i].add_(gi, alpha=w)
 
                 # ── Retain gradient ────────────────────────────────────────
                 try:
@@ -210,13 +242,19 @@ class MultiTaskNPOUnlearner:
                 r_out  = self.model(input_ids=r_ids, attention_mask=r_mask,
                                     labels=r_labs)
                 r_out.loss.backward()
-                g_retain = self._flat_grad()
+                g_retain = self._capture_grads()
                 epoch_retain += r_out.loss.item()
                 optimizer.zero_grad()
 
-                # ── Final update: negate forget + add retain ───────────────
-                final = self.beta_retain * g_retain - combined
-                self._set_grad_from_flat(final)
+                # ── Final gradient: retain descent − forget ascent ─────────
+                final: List[torch.Tensor] = [
+                    gr.mul_(self.beta_retain).sub_(cf)
+                    for gr, cf in zip(g_retain, combined)
+                ]
+                self._apply_grads(final)
+
+                # Explicitly free temporary grad lists to help GC
+                del task_grads, ortho_grads, basis, combined, g_retain, final
 
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 1.0)
                 optimizer.step()
