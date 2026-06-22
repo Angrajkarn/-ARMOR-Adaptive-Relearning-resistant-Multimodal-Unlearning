@@ -7,10 +7,10 @@
     "leakage_rate": 0.25
   },
   "post_unlearn": {
-    "greedy_rouge_l": 0.08759920634920636,
+    "greedy_rouge_l": 0.14681906450523474,
     "beam_rouge_l": 0.1686803065032833,
-    "tree_rouge_l": 0.20418208996613105,
-    "avg_logprob": -2.7938551753759384,
+    "tree_rouge_l": 0.2193336051176462,
+    "avg_logprob": -2.8038854748010635,
     "leakage_rate": 0.125
   }
 }

@@ -3,52 +3,52 @@
   "overall_verified": true,
   "n_verified": 4,
   "n_total": 4,
-  "mean_influence_gap": 0.070554,
+  "mean_influence_gap": 0.078162,
   "threshold": 0.01,
   "method": "GradientAscent",
   "pre_commitment": {
     "model_hash": "d711ae2be31efbcf43fb6d543f5e3050587a1414c591a1c0e9e3a2117af0c867",
-    "forget_hash": "04317a809a028a547e8d5a200ccbbfb017edfff75839edefb656b7d004b0fa23",
-    "commitment": "7a07a1694c2334b737ff0d9ba0891ac751a9e87d588cb7ca3d85feb16e872628",
-    "timestamp": "2026-06-19T10:09:34.553341+00:00",
+    "forget_hash": "3d95bdf2089f150495d70db87033b7b3a5b081df631ad65efa5412c7c6b427d4",
+    "commitment": "631ea399a796d81d9e97237c12fd59915828613d1df3f02420029cceca78631d",
+    "timestamp": "2026-06-21T08:56:50.731047+00:00",
     "method": "GradientAscent"
   },
   "post_commitment": {
-    "model_hash": "97647ad77f9cead17821c69b156d8cddad6f6292173e2bd2eda1e8d0234ba039",
-    "forget_hash": "04317a809a028a547e8d5a200ccbbfb017edfff75839edefb656b7d004b0fa23",
-    "commitment": "8c81a78d3bbb11663b44eca1156d15ef7ed583eabf853361744bb826d1e73ef1",
-    "timestamp": "2026-06-19T10:13:39.988955+00:00",
+    "model_hash": "204cfc91beda355c38bd297d0e7fb70b7f72d71a9b165ae3b750ee90f46b73ad",
+    "forget_hash": "3d95bdf2089f150495d70db87033b7b3a5b081df631ad65efa5412c7c6b427d4",
+    "commitment": "0f776db7e1c119c2086b67f1fbd7f4c77416a36c09b4a8a3a59c29d1c4b1929c",
+    "timestamp": "2026-06-21T08:58:10.755245+00:00",
     "method": "GradientAscent"
   },
   "per_sample": [
     {
       "sample_idx": 0,
-      "influence_pre": -0.178188,
-      "influence_post": -0.242688,
-      "influence_gap": 0.0645,
+      "influence_pre": -0.174364,
+      "influence_post": -0.225811,
+      "influence_gap": 0.051447,
       "verified": true
     },
     {
       "sample_idx": 1,
-      "influence_pre": -0.371229,
-      "influence_post": -0.437882,
-      "influence_gap": 0.066653,
+      "influence_pre": -0.269128,
+      "influence_post": -0.374053,
+      "influence_gap": 0.104924,
       "verified": true
     },
     {
       "sample_idx": 2,
-      "influence_pre": -0.160621,
-      "influence_post": -0.250659,
-      "influence_gap": 0.090038,
+      "influence_pre": -0.191526,
+      "influence_post": -0.285668,
+      "influence_gap": 0.094142,
       "verified": true
     },
     {
       "sample_idx": 3,
-      "influence_pre": -0.210869,
-      "influence_post": -0.271894,
-      "influence_gap": 0.061025,
+      "influence_pre": -0.20197,
+      "influence_post": -0.264105,
+      "influence_gap": 0.062135,
       "verified": true
     }
   ],
-  "generated_at": "2026-06-19T10:16:41.140516+00:00"
+  "generated_at": "2026-06-21T08:58:36.890733+00:00"
 }

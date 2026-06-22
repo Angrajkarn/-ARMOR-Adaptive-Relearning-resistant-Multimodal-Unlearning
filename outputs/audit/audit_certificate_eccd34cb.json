@@ -1,27 +1,27 @@
 {
   "certificate": {
-    "certificate_id": "84f11d47-9c17-4095-b82b-0c60038ea103",
-    "timestamp": "2026-06-21T18:55:20.330773+00:00",
+    "certificate_id": "eccd34cb-4ad1-49cd-93ad-90bfe507248d",
+    "timestamp": "2026-06-21T08:00:54.440152+00:00",
     "issuer": "ARMOR Compliance Auditing Suite v1.2",
     "model_name": "distilgpt2",
     "unlearning_method": "GradientAscent",
     "commitments": {
       "pre_unlearn_model_hash": "d711ae2be31efbcf43fb6d543f5e3050587a1414c591a1c0e9e3a2117af0c867",
-      "post_unlearn_model_hash": "a53c691dac365b37c98bb757b8f4f8a0dd22f413b55df17279c5fe04aca6d43d",
+      "post_unlearn_model_hash": "cbc645bcebf9ea622c0adfb41d11307a24da5a3496014f35df11dbbc8490168c",
       "forget_dataset_hash": "3d95bdf2089f150495d70db87033b7b3a5b081df631ad65efa5412c7c6b427d4",
       "pre_unlearn_zk_commitment": "631ea399a796d81d9e97237c12fd59915828613d1df3f02420029cceca78631d",
-      "post_unlearn_zk_commitment": "4a0d1cbe50bacb0411d08ecec8c2c6a4049f76cd515873c28af462a9da4b3c94"
+      "post_unlearn_zk_commitment": "93f74c24b39e1ac467a46dede58f73cc818b636ca147e0e1d709208df101da98"
     },
     "metrics": {
       "zk_influence_verification": {
         "verdict": "VERIFIED ✓",
         "n_verified": 4,
         "n_total": 4,
-        "mean_influence_gap": 0.063055,
+        "mean_influence_gap": 0.074145,
         "threshold": 0.01
       },
       "differential_privacy_bounds": {
-        "mia_auroc": 0.15625,
+        "mia_auroc": 0.109375,
         "empirical_epsilon": 0.0,
         "formal_epsilon": null,
         "delta": 1e-05,
@@ -38,6 +38,6 @@
   "signature": {
     "algorithm": "HMAC-SHA256",
     "signed_by": "ARMOR Enterprise Compliance CA",
-    "signature_hash": "22d3729751b133fbda348d695e83b4fbbc7ba38eae4c44437a69e8d1c9c46c6c"
+    "signature_hash": "4f3ac78ec9513370dd025e6383f9420ebacc33f2eafcbf025a5554448c2a4071"
   }
 }
