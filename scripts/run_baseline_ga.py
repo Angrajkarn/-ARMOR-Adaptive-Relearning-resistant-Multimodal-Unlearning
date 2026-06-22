@@ -48,13 +48,21 @@ def parse_args():
                    help="Run Membership Inference Attack audit")
     p.add_argument("--no-save",    action="store_true",
                    help="Skip saving checkpoint (for smoke tests)")
+    # ── Speed flags (for Kaggle / T4 GPU) ─────────────────────────────────────
+    p.add_argument("--fast",       action="store_true",
+                   help="Kaggle speed preset: cap retain=200, fp16, skip pre-eval ROUGE, "
+                        "max_rouge_samples=10. Reduces 6-7hr runs to ~20-30min.")
+    p.add_argument("--max-retain", type=int, default=None,
+                   help="Cap retain set size (e.g. 200). 0 = full retain99 (3960 samples).")
+    p.add_argument("--fp16",       action="store_true",
+                   help="Enable fp16 autocast during training (T4/V100).")
     return p.parse_args()
 
 
 def main():
     args = parse_args()
 
-    # ── Config ──────────────────────────────────────────────────────────────────
+    # ── Config ───────────────────────────────────────────────────────────────────
     cfg = ARMORConfig(
         debug=args.debug,
         model_key=args.model if not args.debug else "debug",
@@ -65,11 +73,24 @@ def main():
     if args.epochs: cfg.unlearn_epochs = args.epochs
     if args.lr:     cfg.unlearn_lr     = args.lr
 
+    # ── Apply --fast / speed flags ───────────────────────────────────────────────
+    if args.fast:
+        cfg.max_retain_samples   = 200    # Cap retain99 (3960) to 200 samples
+        cfg.use_fp16             = True   # fp16 autocast on T4/V100
+        cfg.rouge_max_new_tokens = 32     # Short ROUGE generation
+        print("[fast] Speed preset active: retain=200, fp16=True, rouge_tokens=32")
+    if args.max_retain is not None:
+        cfg.max_retain_samples = args.max_retain
+    if args.fp16:
+        cfg.use_fp16 = True
+
     print("=" * 60)
     print(f"  ARMOR — Gradient Ascent Baseline")
     print(f"  Model  : {cfg.model_name}")
     print(f"  Device : {cfg.device}")
     print(f"  Debug  : {cfg.debug}")
+    print(f"  fp16   : {cfg.use_fp16}")
+    print(f"  Retain : {cfg.max_retain_samples if cfg.max_retain_samples > 0 else 'full (retain99)'}")
     print("=" * 60)
 
     # ── Data ────────────────────────────────────────────────────────────────────
@@ -78,18 +99,21 @@ def main():
     # ── Model ───────────────────────────────────────────────────────────────────
     model, tokenizer = get_model_and_tokenizer(cfg)
 
-    # ── Pre-unlearning evaluation ────────────────────────────────────────────────
+    # ── Pre-unlearning evaluation ────────────────────────────────────────────────────
     eval_forget_loader = make_dataloader(forget_samples, tokenizer, cfg, shuffle=False)
     eval_retain_loader = make_dataloader(retain_samples, tokenizer, cfg, shuffle=False)
 
     evaluator = UnlearningEvaluator(model, tokenizer, cfg)
+    # In --fast mode, skip pre-eval ROUGE to save 5-10 min on 7B models
+    run_pre_rouge = (not args.no_rouge) and (not args.fast)
+    max_rouge     = 10 if args.fast else (20 if cfg.debug else 50)
     print("\n[main] Pre-unlearning evaluation:")
     pre_result = evaluator.evaluate(
         forget_samples, retain_samples,
         eval_forget_loader, eval_retain_loader,
         method_name="Pre-unlearning (no GA)",
-        run_rouge=not args.no_rouge,
-        max_rouge_samples=20 if cfg.debug else 50,
+        run_rouge=run_pre_rouge,
+        max_rouge_samples=max_rouge,
     )
     pre_result.print_table()
     original_forget_acc = pre_result.forget_accuracy
@@ -108,14 +132,14 @@ def main():
     unlearner = GradientAscentUnlearner(model, cfg)
     train_result = unlearner.run(forget_loader, retain_loader)
 
-    # ── Post-unlearning evaluation ────────────────────────────────────────────────
+    # ── Post-unlearning evaluation ────────────────────────────────────────────────────
     print("\n[main] Post-unlearning evaluation:")
     post_result = evaluator.evaluate(
         forget_samples, retain_samples,
         eval_forget_loader, eval_retain_loader,
         method_name="Gradient Ascent",
         run_rouge=not args.no_rouge,
-        max_rouge_samples=20 if cfg.debug else 50,
+        max_rouge_samples=max_rouge,
     )
     post_result.print_table()
 

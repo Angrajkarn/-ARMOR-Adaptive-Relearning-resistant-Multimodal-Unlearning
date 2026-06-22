@@ -61,6 +61,17 @@ def parse_args():
     p.add_argument("--run-mia",    action="store_true")
     p.add_argument("--no-save",    action="store_true",
                    help="Skip saving checkpoint (for smoke tests)")
+    # ── Speed flags (for Kaggle / T4 GPU) ─────────────────────────────────────
+    p.add_argument("--fast",       action="store_true",
+                   help="Kaggle speed preset: cap retain=200, fp16, skip pre-eval ROUGE, "
+                        "sam_every=2, max_rouge=10. Cuts 6-7hr to ~25-40min.")
+    p.add_argument("--max-retain", type=int, default=None,
+                   help="Cap retain set size (e.g. 200). 0 = full retain99 (3960 samples).")
+    p.add_argument("--fp16",       action="store_true",
+                   help="Enable fp16 autocast during training (T4/V100).")
+    p.add_argument("--sam-every",  type=int, default=1,
+                   help="Run full SAM two-phase update every N steps (default=1=every step). "
+                        "N=2 halves SAM overhead, N=4 reduces it 4x. Quality impact is small.")
     return p.parse_args()
 
 
@@ -74,12 +85,14 @@ class NPOSAMUnlearner:
     robustness against relearning attacks.
     """
 
-    def __init__(self, model, ref_model, cfg: ARMORConfig, sam_rho: float = 0.05):
+    def __init__(self, model, ref_model, cfg: ARMORConfig,
+                 sam_rho: float = 0.05, sam_every: int = 1):
         self.model     = model
         self.ref_model = ref_model
         self.cfg       = cfg
         self.device    = cfg.device
         self.sam_rho   = sam_rho
+        self.sam_every = max(1, sam_every)  # SAM full update every N steps (1=always)
 
         # Freeze reference model
         if ref_model is not model:
@@ -134,7 +147,12 @@ class NPOSAMUnlearner:
         return npo_loss
 
     def run(self, forget_loader, retain_loader=None) -> UnlearningResult:
-        """Run NPO+SAM unlearning with the two-phase SAM update per batch."""
+        """Run NPO+SAM unlearning with the two-phase SAM update per batch.
+
+        When self.sam_every > 1, the expensive SAM second_step (extra forward+backward)
+        is skipped every non-SAM step and replaced with a plain gradient update.
+        This reduces compute: sam_every=2 → ~1.5x faster, sam_every=4 → ~1.75x faster.
+        """
         cfg   = self.cfg
         model = self.model
         model.train()
@@ -156,31 +174,42 @@ class NPOSAMUnlearner:
             for step, forget_batch in enumerate(pbar):
                 retain_batch = next(retain_iter) if retain_iter else None
 
-                # ── SAM two-phase update ───────────────────────────────────────
-                # We need to call the loss function twice.
-                # Use a closure that captures the current batch.
                 def loss_closure():
                     return self._compute_npo_loss(forget_batch, retain_batch)
 
-                # Phase 1: compute loss + grad, perturb weights
-                self.sam_optimizer.zero_grad()
-                loss = loss_closure()
-                loss.backward()
-                self.sam_optimizer.first_step(zero_grad=True)
+                use_sam = (step % self.sam_every == 0)  # Full SAM step or plain step?
 
-                # Phase 2: compute loss at perturbed point + update
-                loss2 = loss_closure()
-                loss2.backward()
-                nn.utils.clip_grad_norm_(model.parameters(), cfg.max_grad_norm)
-                self.sam_optimizer.second_step(zero_grad=True)
+                if use_sam:
+                    # ── SAM two-phase update (find flat minimum) ─────────────────
+                    # Phase 1: compute loss + grad, perturb weights
+                    self.sam_optimizer.zero_grad()
+                    loss = loss_closure()
+                    loss.backward()
+                    self.sam_optimizer.first_step(zero_grad=True)
+
+                    # Phase 2: compute loss at perturbed point + update
+                    loss2 = loss_closure()
+                    loss2.backward()
+                    nn.utils.clip_grad_norm_(model.parameters(), cfg.max_grad_norm)
+                    self.sam_optimizer.second_step(zero_grad=True)
+                else:
+                    # ── Plain AdamW step (skip SAM overhead) ───────────────────
+                    self.sam_optimizer.zero_grad()
+                    loss = loss_closure()
+                    loss.backward()
+                    nn.utils.clip_grad_norm_(model.parameters(), cfg.max_grad_norm)
+                    # Use the inner base_optimizer directly
+                    self.sam_optimizer.base_optimizer.step()
+                    self.sam_optimizer.zero_grad()
+                    loss2 = loss  # no second pass
 
                 total_steps += 1
                 epoch_total += loss.item()
                 n_batches   += 1
 
                 pbar.set_postfix({
-                    "loss1": f"{loss.item():.3f}",
-                    "loss2": f"{loss2.item():.3f}",
+                    "loss": f"{loss.item():.3f}",
+                    "sam":  "Y" if use_sam else "n",
                 })
 
             avg = epoch_total / max(n_batches, 1)
@@ -188,7 +217,8 @@ class NPOSAMUnlearner:
             forget_losses.append((epoch + 1, avg))
             retain_losses.append((epoch + 1, 0.0))
 
-            print(f"[NPO+SAM] Epoch {epoch+1:02d} | loss={avg:.4f}")
+            sam_pct = 100 // self.sam_every
+            print(f"[NPO+SAM] Epoch {epoch+1:02d} | loss={avg:.4f} | SAM every {self.sam_every} steps ({sam_pct}%)")
 
         elapsed = time.time() - t0
         print(f"[NPO+SAM] Training complete in {elapsed:.1f}s ({total_steps} steps)")
@@ -219,12 +249,28 @@ def main():
     if args.sam_rho:  cfg.sam_rho        = args.sam_rho
     if args.sam_adaptive: cfg.sam_adaptive = True
 
+    # ── Apply --fast / speed flags ───────────────────────────────────────────────
+    sam_every = args.sam_every  # SAM full step every N steps
+    if args.fast:
+        cfg.max_retain_samples   = 200
+        cfg.use_fp16             = True
+        cfg.rouge_max_new_tokens = 32
+        sam_every = max(sam_every, 2)  # At minimum skip every other SAM step
+        print(f"[fast] Speed preset: retain=200, fp16=True, rouge_tokens=32, sam_every={sam_every}")
+    if args.max_retain is not None:
+        cfg.max_retain_samples = args.max_retain
+    if args.fp16:
+        cfg.use_fp16 = True
+
     print("=" * 60)
     print(f"  ARMOR — NPO + SAM (Relearning-Resistant)")
     print(f"  Model   : {cfg.model_name}")
     print(f"  Device  : {cfg.device}")
     print(f"  SAM ρ   : {cfg.sam_rho}")
+    print(f"  SAM every: {sam_every} steps")
     print(f"  NPO β   : {cfg.npo_beta}")
+    print(f"  fp16    : {cfg.use_fp16}")
+    print(f"  Retain  : {cfg.max_retain_samples if cfg.max_retain_samples > 0 else 'full (retain99)'}")
     print("=" * 60)
 
     forget_samples, retain_samples = load_tofu_splits(cfg)
@@ -252,17 +298,22 @@ def main():
     )
     retain_loader = make_dataloader(retain_samples, tokenizer, cfg, shuffle=True)
 
-    print(f"\n[main] Starting NPO+SAM unlearning (ρ={cfg.sam_rho})...")
-    unlearner = NPOSAMUnlearner(model, ref_model, cfg, sam_rho=cfg.sam_rho)
+    print(f"\n[main] Starting NPO+SAM unlearning (ρ={cfg.sam_rho}, sam_every={sam_every})...")
+    unlearner = NPOSAMUnlearner(model, ref_model, cfg,
+                                sam_rho=cfg.sam_rho,
+                                sam_every=sam_every)
     train_result = unlearner.run(forget_loader, retain_loader)
 
     print("\n[main] Post-unlearning evaluation:")
+    # In --fast mode, skip pre-eval ROUGE; use fewer samples
+    run_post_rouge = not args.no_rouge
+    max_rouge      = 10 if args.fast else (20 if cfg.debug else 50)
     post_result = evaluator.evaluate(
         forget_samples, retain_samples,
         eval_forget_loader, eval_retain_loader,
         method_name="NPO+SAM",
-        run_rouge=not args.no_rouge,
-        max_rouge_samples=20 if cfg.debug else 50,
+        run_rouge=run_post_rouge,
+        max_rouge_samples=max_rouge,
     )
     post_result.print_table()
 

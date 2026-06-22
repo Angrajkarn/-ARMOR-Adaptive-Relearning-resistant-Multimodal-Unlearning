@@ -103,7 +103,7 @@ class EvaluationResult:
 # Helper function
 # ──────────────────────────────────────────────────────────────────────────────
 
-@torch.no_grad()
+@torch.inference_mode()
 def compute_token_accuracy(
     model: PreTrainedModel,
     loader: DataLoader,
@@ -112,6 +112,7 @@ def compute_token_accuracy(
 ) -> float:
     """
     Compute token-level accuracy (% of label tokens predicted correctly).
+    Uses torch.inference_mode for maximum speed (no autograd overhead).
     """
     model.eval()
     total_correct = 0
@@ -178,7 +179,7 @@ class UnlearningEvaluator:
 
     # ── Teacher-forced accuracy ────────────────────────────────────────────────
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def _compute_token_accuracy(
         self, loader: DataLoader
     ) -> float:
@@ -186,13 +187,13 @@ class UnlearningEvaluator:
         Compute token-level accuracy (% of label tokens predicted correctly).
 
         This is the fastest way to measure model behaviour on a set without
-        full text generation.
+        full text generation. Uses torch.inference_mode for maximum speed.
         """
         return compute_token_accuracy(self.model, loader, self.device)
 
     # ── Generative ROUGE ───────────────────────────────────────────────────────
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def _compute_rouge(
         self,
         samples: list[TOFUSample],
@@ -217,6 +218,9 @@ class UnlearningEvaluator:
         rouge1_scores = []
         rougeL_scores = []
 
+        # Use cfg.rouge_max_new_tokens (default 32) — TOFU answers rarely exceed 32 tokens
+        max_new_tokens = getattr(self.cfg, "rouge_max_new_tokens", 32)
+
         for sample in tqdm(samples, desc="  [eval] ROUGE generation", leave=False):
             # Format the question as a prompt (without the answer)
             prompt = f"Question: {sample.question}\nAnswer:"
@@ -230,7 +234,7 @@ class UnlearningEvaluator:
             # Generate
             output_ids = self.model.generate(
                 **inputs,
-                max_new_tokens=64,
+                max_new_tokens=max_new_tokens,
                 do_sample=False,       # Greedy for reproducibility
                 pad_token_id=self.tokenizer.pad_token_id,
                 eos_token_id=self.tokenizer.eos_token_id,

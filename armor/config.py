@@ -89,11 +89,16 @@ class ARMORConfig:
     eval_batch_size: int = 2
     rouge_n: int = 1                          # ROUGE-1 (also reports ROUGE-L)
     mia_n_neighbors: int = 5                  # Min-K% neighbours for MIA
+    rouge_max_new_tokens: int = 32            # Max tokens generated per ROUGE sample (32 is enough for TOFU answers)
 
     # ── Relearning Attack ─────────────────────────────────────────────────────
     relearn_n_samples: int = 50               # Forget samples for attack
     relearn_epochs: int = 10
     relearn_lr: float = 2e-5
+
+    # ── Speed / Kaggle optimisations ──────────────────────────────────────────
+    max_retain_samples: int = 0               # 0 = use full retain set; >0 = subsample to N (e.g. 200 for Kaggle)
+    use_fp16: bool = False                    # Enable torch.autocast fp16 in training loops (T4/V100 compatible)
 
     # ── Paths ─────────────────────────────────────────────────────────────────
     output_dir: str = "outputs"

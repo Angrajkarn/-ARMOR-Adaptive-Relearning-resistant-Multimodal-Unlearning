@@ -97,11 +97,17 @@ class GradientAscentUnlearner:
     def _compute_loss(self, batch: dict) -> torch.Tensor:
         """Standard cross-entropy forward pass. Moves batch to device."""
         batch = {k: v.to(self.device) for k, v in batch.items()}
-        outputs = self.model(
-            input_ids=batch["input_ids"],
-            attention_mask=batch["attention_mask"],
-            labels=batch["labels"],
+        ctx = (
+            torch.autocast("cuda", dtype=torch.float16)
+            if self.cfg.use_fp16 and self.device == "cuda"
+            else torch.autocast("cpu")  # no-op on CPU
         )
+        with ctx:
+            outputs = self.model(
+                input_ids=batch["input_ids"],
+                attention_mask=batch["attention_mask"],
+                labels=batch["labels"],
+            )
         return outputs.loss
 
     def _ga_loss(self, forget_batch: dict,

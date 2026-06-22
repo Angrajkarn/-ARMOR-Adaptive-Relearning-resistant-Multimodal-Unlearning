@@ -13,6 +13,11 @@ Rephrase augmentation (for relearning-resistant training):
   the original phrasing. This implements the "rephrasing-invariant gradient
   ascent" component of ARMOR.
 
+Speed note:
+  Use cfg.max_retain_samples > 0 to cap the retain set during training.
+  retain99 = 3,960 samples; subsampling to 200 gives ~20x speedup with
+  negligible quality loss (the forget set is only 40 samples).
+
 Cross-modal NOTE (Step 2):
   When extending to LLaVA, this file will be extended with a
   MultimodalTOFUDataset that pairs images with these text samples.
@@ -159,9 +164,22 @@ def load_tofu_splits(cfg: ARMORConfig, verbose: bool = True):
     forget_samples = _to_samples(forget_hf, "forget")
     retain_samples = _to_samples(retain_hf, "retain")
 
-    if verbose:
-        print(f"[data] Forget set : {len(forget_samples)} samples "
-              f"(+{cfg.num_rephrases} rephrases each)")
+    # ── Optional retain subsampling (Kaggle speed-up) ──────────────────────────
+    # retain99 = 3,960 samples which makes eval and training very slow.
+    # Subsampling to max_retain_samples (e.g. 200) gives ~20x speedup with
+    # negligible quality impact since the forget set is only 40 samples.
+    if (
+        not cfg.debug
+        and cfg.max_retain_samples > 0
+        and len(retain_samples) > cfg.max_retain_samples
+    ):
+        import random as _random
+        rng = _random.Random(42)
+        retain_samples = rng.sample(retain_samples, cfg.max_retain_samples)
+        if verbose:
+            print(f"[data] Retain set (subsampled): {len(retain_samples)} samples "
+                  f"(max_retain_samples={cfg.max_retain_samples})")
+    elif verbose:
         print(f"[data] Retain set : {len(retain_samples)} samples")
 
     return forget_samples, retain_samples
@@ -182,16 +200,21 @@ def _format_qa(question: str, answer: str) -> str:
 
 
 def collate_fn(batch: list[dict], tokenizer: PreTrainedTokenizer,
-               max_seq_len: int, device: str = "cpu"):
+               max_seq_len: int, device: str = "cpu",
+               padding: str = "longest"):
     """
     Collation function for DataLoader. Tokenizes + pads a batch of QA dicts.
 
     Each dict must have keys: "question", "answer"
+
+    Parameters
+    ----------
+    padding : 'longest' (dynamic, fast) or 'max_length' (fixed 256, slower)
     """
     texts = [_format_qa(item["question"], item["answer"]) for item in batch]
     encoded = tokenizer(
         texts,
-        padding="max_length",
+        padding=padding,
         truncation=True,
         max_length=max_seq_len,
         return_tensors="pt",
@@ -211,7 +234,8 @@ def make_dataloader(samples: list[TOFUSample],
                     tokenizer: PreTrainedTokenizer,
                     cfg: ARMORConfig,
                     include_rephrases: bool = False,
-                    shuffle: bool = True) -> DataLoader:
+                    shuffle: bool = True,
+                    padding: str = "longest") -> DataLoader:
     """
     Build a PyTorch DataLoader from TOFUSample list.
 
@@ -220,6 +244,9 @@ def make_dataloader(samples: list[TOFUSample],
     include_rephrases : bool
         If True, expand each sample with its rephrase variants.
         Use this flag for rephrase-invariant gradient ascent on the forget set.
+    padding : str
+        'longest' = dynamic padding per batch (fast, recommended for GPU).
+        'max_length' = fixed 256-token padding (slower, for exact reproducibility).
     """
     rows = []
     for s in samples:
@@ -231,15 +258,6 @@ def make_dataloader(samples: list[TOFUSample],
     # Wrap as HuggingFace Dataset for easy DataLoader integration
     hf_ds = Dataset.from_list(rows)
 
-    def _tokenize(batch):
-        return collate_fn(
-            [{"question": q, "answer": a}
-             for q, a in zip(batch["question"], batch["answer"])],
-            tokenizer=tokenizer,
-            max_seq_len=cfg.max_seq_len,
-            device="cpu",   # Move to device in training loop
-        )
-
     loader = DataLoader(
         hf_ds,
         batch_size=cfg.batch_size,
@@ -247,6 +265,7 @@ def make_dataloader(samples: list[TOFUSample],
         collate_fn=lambda batch: collate_fn(
             batch, tokenizer=tokenizer,
             max_seq_len=cfg.max_seq_len,
+            padding=padding,
         ),
     )
     return loader

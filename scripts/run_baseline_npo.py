@@ -39,6 +39,14 @@ def parse_args():
     p.add_argument("--run-mia",    action="store_true")
     p.add_argument("--no-save",    action="store_true",
                    help="Skip saving checkpoint (for smoke tests)")
+    # ── Speed flags (for Kaggle / T4 GPU) ─────────────────────────────────────
+    p.add_argument("--fast",       action="store_true",
+                   help="Kaggle speed preset: cap retain=200, fp16, skip pre-eval ROUGE, "
+                        "max_rouge_samples=10. Reduces 6-7hr runs to ~20-30min.")
+    p.add_argument("--max-retain", type=int, default=None,
+                   help="Cap retain set size (e.g. 200). 0 = full retain99 (3960 samples).")
+    p.add_argument("--fp16",       action="store_true",
+                   help="Enable fp16 autocast during training (T4/V100).")
     return p.parse_args()
 
 
@@ -56,11 +64,24 @@ def main():
     if args.lr:       cfg.unlearn_lr     = args.lr
     if args.npo_beta: cfg.npo_beta       = args.npo_beta
 
+    # ── Apply --fast / speed flags ───────────────────────────────────────────────
+    if args.fast:
+        cfg.max_retain_samples   = 200
+        cfg.use_fp16             = True
+        cfg.rouge_max_new_tokens = 32
+        print("[fast] Speed preset active: retain=200, fp16=True, rouge_tokens=32")
+    if args.max_retain is not None:
+        cfg.max_retain_samples = args.max_retain
+    if args.fp16:
+        cfg.use_fp16 = True
+
     print("=" * 60)
     print(f"  ARMOR — NPO Baseline")
     print(f"  Model  : {cfg.model_name}")
     print(f"  Device : {cfg.device}")
     print(f"  β      : {cfg.npo_beta}")
+    print(f"  fp16   : {cfg.use_fp16}")
+    print(f"  Retain : {cfg.max_retain_samples if cfg.max_retain_samples > 0 else 'full (retain99)'}")
     print("=" * 60)
 
     # ── Data ────────────────────────────────────────────────────────────────────
@@ -71,18 +92,21 @@ def main():
     model, tokenizer = get_model_and_tokenizer(cfg)
     ref_model        = get_frozen_reference_model(model, cfg)
 
-    # ── Pre-unlearning baseline ───────────────────────────────────────────────────
+    # ── Pre-unlearning baseline ────────────────────────────────────────────────────
     eval_forget_loader = make_dataloader(forget_samples, tokenizer, cfg, shuffle=False)
     eval_retain_loader = make_dataloader(retain_samples, tokenizer, cfg, shuffle=False)
 
     evaluator = UnlearningEvaluator(model, tokenizer, cfg)
+    # In --fast mode, skip pre-eval ROUGE to save 5-10 min on 7B models
+    run_pre_rouge = (not args.no_rouge) and (not args.fast)
+    max_rouge     = 10 if args.fast else (20 if cfg.debug else 50)
     print("\n[main] Pre-unlearning evaluation:")
     pre_result = evaluator.evaluate(
         forget_samples, retain_samples,
         eval_forget_loader, eval_retain_loader,
         method_name="Pre-unlearning (no NPO)",
-        run_rouge=not args.no_rouge,
-        max_rouge_samples=20 if cfg.debug else 50,
+        run_rouge=run_pre_rouge,
+        max_rouge_samples=max_rouge,
     )
     pre_result.print_table()
     original_forget_acc = pre_result.forget_accuracy
@@ -99,14 +123,14 @@ def main():
     unlearner = NPOUnlearner(model, ref_model, cfg)
     train_result = unlearner.run(forget_loader, retain_loader)
 
-    # ── Post-unlearning evaluation ────────────────────────────────────────────────
+    # ── Post-unlearning evaluation ────────────────────────────────────────────────────
     print("\n[main] Post-unlearning evaluation:")
     post_result = evaluator.evaluate(
         forget_samples, retain_samples,
         eval_forget_loader, eval_retain_loader,
         method_name="NPO",
         run_rouge=not args.no_rouge,
-        max_rouge_samples=20 if cfg.debug else 50,
+        max_rouge_samples=max_rouge,
     )
     post_result.print_table()
 

@@ -175,13 +175,20 @@ class NPOUnlearner:
         attn_mask = batch["attention_mask"].to(self.device)
         labels    = batch["labels"].to(self.device)
 
-        # Current model log-probs (trainable)
-        policy_log_probs = compute_token_log_probs(
-            self.model, input_ids, attn_mask, labels
+        fp16_ctx = (
+            torch.autocast("cuda", dtype=torch.float16)
+            if self.cfg.use_fp16 and self.device == "cuda"
+            else torch.autocast("cpu")  # no-op on CPU
         )
 
+        # Current model log-probs (trainable)
+        with fp16_ctx:
+            policy_log_probs = compute_token_log_probs(
+                self.model, input_ids, attn_mask, labels
+            )
+
         # Reference model log-probs (frozen, no grad)
-        with torch.no_grad():
+        with torch.no_grad(), fp16_ctx:
             if self.ref_model is self.model:
                 with self.model.disable_adapter():
                     ref_log_probs = compute_token_log_probs(
@@ -204,11 +211,17 @@ class NPOUnlearner:
     def _retain_loss(self, batch: dict) -> torch.Tensor:
         """Standard cross-entropy on retain batch to prevent forgetting."""
         batch = {k: v.to(self.device) for k, v in batch.items()}
-        outputs = self.model(
-            input_ids=batch["input_ids"],
-            attention_mask=batch["attention_mask"],
-            labels=batch["labels"],
+        fp16_ctx = (
+            torch.autocast("cuda", dtype=torch.float16)
+            if self.cfg.use_fp16 and self.device == "cuda"
+            else torch.autocast("cpu")
         )
+        with fp16_ctx:
+            outputs = self.model(
+                input_ids=batch["input_ids"],
+                attention_mask=batch["attention_mask"],
+                labels=batch["labels"],
+            )
         return outputs.loss
 
     # ── Main training loop ─────────────────────────────────────────────────────
