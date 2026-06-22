@@ -213,10 +213,11 @@ def get_frozen_reference_model(
         # Full precision: deepcopy the model
         ref_model = deepcopy(model)
 
-    # Freeze all parameters
-    for p in ref_model.parameters():
-        p.requires_grad_(False)
-    ref_model.eval()
+    # Freeze all parameters if it's a separate model instance
+    if ref_model is not model:
+        for p in ref_model.parameters():
+            p.requires_grad_(False)
+        ref_model.eval()
 
     return ref_model
 
