@@ -1,6 +1,6 @@
 {
-  "forget_quality": 0.45915492957746484,
-  "forget_accuracy": 0.5408450704225352,
-  "retain_accuracy": 0.4116022099447514,
+  "forget_quality": 0.45633802816901403,
+  "forget_accuracy": 0.543661971830986,
+  "retain_accuracy": 0.4088397790055249,
   "mia_auroc": -1.0
 }

@@ -3,52 +3,52 @@
   "overall_verified": true,
   "n_verified": 4,
   "n_total": 4,
-  "mean_influence_gap": 0.078162,
+  "mean_influence_gap": 0.0881,
   "threshold": 0.01,
   "method": "GradientAscent",
   "pre_commitment": {
     "model_hash": "d711ae2be31efbcf43fb6d543f5e3050587a1414c591a1c0e9e3a2117af0c867",
     "forget_hash": "3d95bdf2089f150495d70db87033b7b3a5b081df631ad65efa5412c7c6b427d4",
     "commitment": "631ea399a796d81d9e97237c12fd59915828613d1df3f02420029cceca78631d",
-    "timestamp": "2026-06-21T08:56:50.731047+00:00",
+    "timestamp": "2026-06-22T13:15:58.896828+00:00",
     "method": "GradientAscent"
   },
   "post_commitment": {
-    "model_hash": "204cfc91beda355c38bd297d0e7fb70b7f72d71a9b165ae3b750ee90f46b73ad",
+    "model_hash": "07a0326b295e56653902e2a51457fd4f447a02099fb6c812ab9f0fbe9d7c0955",
     "forget_hash": "3d95bdf2089f150495d70db87033b7b3a5b081df631ad65efa5412c7c6b427d4",
-    "commitment": "0f776db7e1c119c2086b67f1fbd7f4c77416a36c09b4a8a3a59c29d1c4b1929c",
-    "timestamp": "2026-06-21T08:58:10.755245+00:00",
+    "commitment": "492d3c0c13491255cb10061406ae2f12071dffdbd52c68ab499858ad56c5e46c",
+    "timestamp": "2026-06-22T13:22:19.688604+00:00",
     "method": "GradientAscent"
   },
   "per_sample": [
     {
       "sample_idx": 0,
       "influence_pre": -0.174364,
-      "influence_post": -0.225811,
-      "influence_gap": 0.051447,
+      "influence_post": -0.241458,
+      "influence_gap": 0.067094,
       "verified": true
     },
     {
       "sample_idx": 1,
       "influence_pre": -0.269128,
-      "influence_post": -0.374053,
-      "influence_gap": 0.104924,
+      "influence_post": -0.381452,
+      "influence_gap": 0.112324,
       "verified": true
     },
     {
       "sample_idx": 2,
       "influence_pre": -0.191526,
-      "influence_post": -0.285668,
-      "influence_gap": 0.094142,
+      "influence_post": -0.291506,
+      "influence_gap": 0.099981,
       "verified": true
     },
     {
       "sample_idx": 3,
       "influence_pre": -0.20197,
-      "influence_post": -0.264105,
-      "influence_gap": 0.062135,
+      "influence_post": -0.274972,
+      "influence_gap": 0.073003,
       "verified": true
     }
   ],
-  "generated_at": "2026-06-21T08:58:36.890733+00:00"
+  "generated_at": "2026-06-22T13:25:26.410388+00:00"
 }
