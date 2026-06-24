@@ -171,12 +171,12 @@ sys.path.insert(0, '/content/ARMOR')
 # 'distilgpt2'  → DistilGPT-2      (debug/CPU only, very fast)
 MODEL = 'mistral-7b'
 
-# ── Speed flags applied to EVERY experiment ──────────────────────────────────
-# --fast          : retain-set subsampling + FP16 autocast (3-5x speedup)
-# --no-rouge      : skip ROUGE scoring (saves ~1 min per method)
-# --epochs 1      : single training epoch (sufficient for research comparison)
-# These reduce accuracy slightly but keep total runtime ≤ 2 hours
-FAST = '--fast --no-rouge --epochs 1'
+# ── Speed mode (env var — inherited by ALL subprocess calls) ─────────────────
+# ARMOR_FAST=1 tells ARMORConfig to auto-apply:
+#   retain=200 samples, fp16 autocast, epochs=1
+# --no-rouge skips slow ROUGE scoring (~1 min saved per method)
+os.environ['ARMOR_FAST'] = '1'
+FAST = '--no-rouge'   # env var handles the rest
 
 # ── Common args ───────────────────────────────────────────────────────────────
 HF  = f'--hf-token {HF_TOKEN}' if HF_TOKEN else ''
@@ -185,17 +185,15 @@ Q   = '--qlora'
 
 print(f'Model      : {MODEL}')
 print(f'QLoRA      : True (4-bit)')
-print(f'Speed flags: {FAST}')
+print(f'ARMOR_FAST : 1 (retain=200, fp16, epochs=1)')
 print(f'Output dir : {DRIVE_DIR}')
 print()
-print('⏱  Estimated total runtime breakdown:')
+print('⏱  Estimated total runtime (~90 min on T4):')
 print('   GA + NPO + NPO+SAM + RMU + TaskVec  : ~40 min')
 print('   MultiTask + DP + LLaVA + MUSE        : ~30 min')
 print('   Relearning Attack                    : ~5 min')
 print('   ARMOR Modules (9 methods)            : ~10 min')
 print('   Results + Plots                      : ~3 min')
-print('   ─────────────────────────────────────')
-print('   Total                                : ~88 min')
 """))
 
 # ── SECTION: Core Baselines ───────────────────────────────────────────────────
@@ -336,6 +334,9 @@ t0 = time.time()
 !python scripts/run_relearning_attack.py \\
     --model {MODEL} {Q} {HF} \\
     --compare \\
+    --ga-checkpoint  {DRIVE_DIR}/ga/ga_unlearned \\
+    --npo-checkpoint {DRIVE_DIR}/npo/npo_unlearned \\
+    --sam-checkpoint {DRIVE_DIR}/npo_sam/npo_sam_unlearned \\
     --original-acc 0.85 \\
     --n-samples 50 \\
     --epochs 2 \\

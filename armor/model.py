@@ -245,14 +245,28 @@ def load_checkpoint(path: str,
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    if cfg.use_qlora:
+    adapter_config = os.path.join(path, "adapter_config.json")
+
+    if cfg.use_qlora and os.path.isfile(adapter_config):
+        # Checkpoint has LoRA adapter weights — load on top of base model
+        from peft import PeftModel
+        base_model, _ = get_model_and_tokenizer(cfg, verbose=False)
+        model = PeftModel.from_pretrained(base_model, path)
+    elif os.path.isfile(adapter_config):
+        # Has adapter but qlora flag not set — still try PEFT
         from peft import PeftModel
         base_model, _ = get_model_and_tokenizer(cfg, verbose=False)
         model = PeftModel.from_pretrained(base_model, path)
     else:
-        model = AutoModelForCausalLM.from_pretrained(
-            path,
-            dtype=torch.float32 if cfg.device == "cpu" else torch.bfloat16,
-        ).to(cfg.device)
+        # Full-model checkpoint (no adapter) — load directly
+        config_file = os.path.join(path, "config.json")
+        if os.path.isfile(config_file):
+            model = AutoModelForCausalLM.from_pretrained(
+                path,
+                torch_dtype=torch.float32 if cfg.device == "cpu" else torch.bfloat16,
+            ).to(cfg.device)
+        else:
+            print(f"[model] ⚠️  No model files found at {path}, loading fresh model")
+            model, tokenizer = get_model_and_tokenizer(cfg, verbose=False)
 
     return model, tokenizer

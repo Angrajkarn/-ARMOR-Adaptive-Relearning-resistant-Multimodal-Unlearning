@@ -205,6 +205,21 @@ class ARMORConfig:
 
 
     def __post_init__(self):
+        import os as _os
+
+        # ── ARMOR_FAST env var (set by --fast flag in scripts) ────────────────
+        if _os.environ.get("ARMOR_FAST", "") == "1" and not self.debug:
+            self.max_retain_samples   = 200     # Cap retain99 → 200 samples
+            self.use_fp16             = True    # fp16 autocast (T4/V100)
+            self.rouge_max_new_tokens = 32     # Short ROUGE generation
+            if self.unlearn_epochs > 1:
+                self.unlearn_epochs   = 1      # Single epoch for speed
+
+        # ── ARMOR_EPOCHS env var (set by --epochs flag in scripts) ────────────
+        _epochs_str = _os.environ.get("ARMOR_EPOCHS", "")
+        if _epochs_str.isdigit() and int(_epochs_str) > 0:
+            self.unlearn_epochs = int(_epochs_str)
+
         if self.debug:
             # Override to tiny model + minimal data for fast CPU smoke test
             self.model_key         = "debug"

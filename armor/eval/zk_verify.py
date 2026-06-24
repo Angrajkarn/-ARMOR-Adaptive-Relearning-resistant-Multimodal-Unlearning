@@ -205,6 +205,8 @@ class InfluenceEstimator:
 
         grads = []
         for p in self.model.parameters():
+            if not p.requires_grad:
+                continue                       # skip frozen base model params
             if p.grad is not None:
                 grads.append(p.grad.detach().float().flatten())
             else:
