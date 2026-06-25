@@ -1,0 +1,32 @@
+{
+  "ga": {
+    "forget_quality": 0.4484,
+    "forget_accuracy": 0.5516,
+    "retain_accuracy": 0.5384,
+    "mia_auroc": 0.3379
+  },
+  "npo": {
+    "forget_quality": 0.4286,
+    "forget_accuracy": 0.5714,
+    "retain_accuracy": 0.5470,
+    "mia_auroc": 0.4337
+  },
+  "npo_sam": {
+    "forget_quality": 0.4550,
+    "forget_accuracy": 0.5450,
+    "retain_accuracy": 0.5350,
+    "mia_auroc": 0.4980
+  },
+  "rmu": {
+    "forget_quality": 0.4930,
+    "forget_accuracy": 0.5070,
+    "retain_accuracy": 0.3785,
+    "mia_auroc": 0.4500
+  },
+  "task_vector": {
+    "forget_quality": 0.7014,
+    "forget_accuracy": 0.2986,
+    "retain_accuracy": 0.3066,
+    "mia_auroc": 0.5100
+  }
+}

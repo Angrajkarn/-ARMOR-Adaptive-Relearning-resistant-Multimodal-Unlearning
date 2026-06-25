@@ -48,7 +48,7 @@ def write_notebook(cells, metadata, filename):
     }
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(nb, f, indent=1, ensure_ascii=False)
-    print(f"  ✅ Written {len(cells)} cells → {filename}")
+    print(f"  [OK] Written {len(cells)} cells -> {filename}")
 
 
 # ─── Build cells for a given platform ────────────────────────────────────────
@@ -220,6 +220,15 @@ MODEL = 'mistral-7b'    # or 'llama2-7b' (needs HF token) or 'debug' (CPU test)
 # Automatically sets: retain=200 samples, fp16 autocast, epochs=1
 os.environ['ARMOR_FAST'] = '1'
 
+# ── Baselines Control ────────────────────────────────────────────────────────
+# Toggle execution of individual baselines to save time.
+# If False, pre-cached results from the codebase will be used in summaries/plots.
+RUN_GA          = False
+RUN_NPO         = False
+RUN_NPO_SAM     = False
+RUN_RMU         = False
+RUN_TASK_VECTOR = False
+
 # ── Common CLI args ───────────────────────────────────────────────────────────
 FAST = '--no-rouge'            # skip ROUGE (saves ~1 min/method)
 HF   = f'--hf-token {{HF_TOKEN}}' if HF_TOKEN else ''
@@ -245,22 +254,28 @@ These 5 methods form the paper's main comparison table.
     cells.append(code(f"""\
 # ── 6. Gradient Ascent (GA)  ⏱ ~5 min ────────────────────────────────────────
 t0 = time.time()
-!python scripts/run_baseline_ga.py \\
-    --model {{MODEL}} {{Q}} {{HF}} --fast {{FAST}} \\
-    --run-mia \\
-    --output-dir {{DRIVE_DIR}}/ga
-print(f'\\n✅ GA done in {{(time.time()-t0)/60:.1f}} min')
+if RUN_GA:
+    !python scripts/run_baseline_ga.py \\
+        --model {{MODEL}} {{Q}} {{HF}} --fast {{FAST}} \\
+        --run-mia \\
+        --output-dir {{DRIVE_DIR}}/ga
+    print(f'\\n✅ GA done in {{(time.time()-t0)/60:.1f}} min')
+else:
+    print('ℹ️ GA execution skipped (RUN_GA=False). Using pre-computed results.')
 """))
 
     # NPO
     cells.append(code(f"""\
 # ── 7. NPO Baseline  ⏱ ~5 min ────────────────────────────────────────────────
 t0 = time.time()
-!python scripts/run_baseline_npo.py \\
-    --model {{MODEL}} {{Q}} {{HF}} --fast {{FAST}} \\
-    --run-mia \\
-    --output-dir {{DRIVE_DIR}}/npo
-print(f'\\n✅ NPO done in {{(time.time()-t0)/60:.1f}} min')
+if RUN_NPO:
+    !python scripts/run_baseline_npo.py \\
+        --model {{MODEL}} {{Q}} {{HF}} --fast {{FAST}} \\
+        --run-mia \\
+        --output-dir {{DRIVE_DIR}}/npo
+    print(f'\\n✅ NPO done in {{(time.time()-t0)/60:.1f}} min')
+else:
+    print('ℹ️ NPO execution skipped (RUN_NPO=False). Using pre-computed results.')
 """))
 
     # NPO+SAM — key: sam_every=4 and sam-rho=0.05
@@ -268,35 +283,44 @@ print(f'\\n✅ NPO done in {{(time.time()-t0)/60:.1f}} min')
 # ── 8. NPO+SAM — ARMOR Core  ⏱ ~10 min ──────────────────────────────────────
 # sam-every=4 cuts SAM overhead by 50% vs default (sam-every=2)
 t0 = time.time()
-!python scripts/run_npo_sam.py \\
-    --model {{MODEL}} {{Q}} {{HF}} --fast {{FAST}} \\
-    --sam-rho 0.05 --sam-every 4 \\
-    --run-mia \\
-    --output-dir {{DRIVE_DIR}}/npo_sam
-print(f'\\n✅ NPO+SAM done in {{(time.time()-t0)/60:.1f}} min')
+if RUN_NPO_SAM:
+    !python scripts/run_npo_sam.py \\
+        --model {{MODEL}} {{Q}} {{HF}} --fast {{FAST}} \\
+        --sam-rho 0.05 --sam-every 4 \\
+        --run-mia \\
+        --output-dir {{DRIVE_DIR}}/npo_sam
+    print(f'\\n✅ NPO+SAM done in {{(time.time()-t0)/60:.1f}} min')
+else:
+    print('ℹ️ NPO+SAM execution skipped (RUN_NPO_SAM=False). Using pre-computed results.')
 """))
 
     # RMU
     cells.append(code(f"""\
 # ── 9. RMU — Representation Misdirection  ⏱ ~4 min ──────────────────────────
 t0 = time.time()
-!python scripts/run_rmu.py \\
-    --model {{MODEL}} {{Q}} {{HF}} {{FAST}} \\
-    --alpha 1200.0 --beta 6.5 \\
-    --run-mia \\
-    --output-dir {{DRIVE_DIR}}/rmu
-print(f'\\n✅ RMU done in {{(time.time()-t0)/60:.1f}} min')
+if RUN_RMU:
+    !python scripts/run_rmu.py \\
+        --model {{MODEL}} {{Q}} {{HF}} {{FAST}} \\
+        --alpha 1200.0 --beta 6.5 \\
+        --run-mia \\
+        --output-dir {{DRIVE_DIR}}/rmu
+    print(f'\\n✅ RMU done in {{(time.time()-t0)/60:.1f}} min')
+else:
+    print('ℹ️ RMU execution skipped (RUN_RMU=False). Using pre-computed results.')
 """))
 
     # Task Vector
     cells.append(code(f"""\
 # ── 10. Task Vector  ⏱ ~5 min ────────────────────────────────────────────────
 t0 = time.time()
-!python scripts/run_task_vector.py \\
-    --model {{MODEL}} {{Q}} {{HF}} {{FAST}} \\
-    --lam 1.0 --run-mia \\
-    --output-dir {{DRIVE_DIR}}/task_vector
-print(f'\\n✅ Task Vector done in {{(time.time()-t0)/60:.1f}} min')
+if RUN_TASK_VECTOR:
+    !python scripts/run_task_vector.py \\
+        --model {{MODEL}} {{Q}} {{HF}} {{FAST}} \\
+        --lam 1.0 --run-mia \\
+        --output-dir {{DRIVE_DIR}}/task_vector
+    print(f'\\n✅ Task Vector done in {{(time.time()-t0)/60:.1f}} min')
+else:
+    print('ℹ️ Task Vector execution skipped (RUN_TASK_VECTOR=False). Using pre-computed results.')
 
 elapsed = (time.time() - NOTEBOOK_START) / 60
 print(f'\\n📊 Core baselines done. Elapsed: {{elapsed:.0f}} min')
@@ -315,15 +339,22 @@ Tests if an adversary can fine-tune the model back to remembering forgotten data
     cells.append(code(f"""\
 # ── 11. Relearning Attack — GA vs NPO vs NPO+SAM  ⏱ ~4 min ──────────────────
 t0 = time.time()
-!python scripts/run_relearning_attack.py \\
-    --model {{MODEL}} {{Q}} {{HF}} \\
-    --compare \\
-    --ga-checkpoint  {{DRIVE_DIR}}/ga/ga_unlearned \\
-    --npo-checkpoint {{DRIVE_DIR}}/npo/npo_unlearned \\
-    --sam-checkpoint {{DRIVE_DIR}}/npo_sam/npo_sam_unlearned \\
-    --original-acc 0.85 \\
-    --n-samples 30 --epochs 2 --no-save
-print(f'\\n✅ Relearning Attack done in {{(time.time()-t0)/60:.1f}} min')
+ga_ckpt  = f"{{DRIVE_DIR}}/ga/ga_unlearned"
+npo_ckpt = f"{{DRIVE_DIR}}/npo/npo_unlearned"
+sam_ckpt = f"{{DRIVE_DIR}}/npo_sam/npo_sam_unlearned"
+
+if os.path.exists(ga_ckpt) and os.path.exists(npo_ckpt) and os.path.exists(sam_ckpt):
+    !python scripts/run_relearning_attack.py \\
+        --model {{MODEL}} {{Q}} {{HF}} \\
+        --compare \\
+        --ga-checkpoint  {{ga_ckpt}} \\
+        --npo-checkpoint {{npo_ckpt}} \\
+        --sam-checkpoint {{sam_ckpt}} \\
+        --original-acc 0.85 \\
+        --n-samples 30 --epochs 2 --no-save
+    print(f'\\n✅ Relearning Attack done in {{(time.time()-t0)/60:.1f}} min')
+else:
+    print('ℹ️ Skipping Relearning Attack: One or more baseline checkpoints are missing.')
 """))
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -521,6 +552,28 @@ import json, os, glob
 import pandas as pd
 
 results = []
+
+# 1. Load pre-computed baseline results from the repository if available
+baseline_file = os.path.join('{REPO_DIR}', 'armor/baseline_results.json')
+baseline_data = {{}}
+if os.path.exists(baseline_file):
+    try:
+        with open(baseline_file) as f:
+            baseline_data = json.load(f)
+    except Exception as e:
+        print(f"Warning loading baseline cache: {{e}}")
+
+# Pre-populate results with baseline_data
+for method, metrics in baseline_data.items():
+    results.append({{
+        'Method'           : method,
+        'Forget Quality ↑' : round(metrics.get('forget_quality', 0), 4),
+        'Forget Acc ↓'     : round(metrics.get('forget_accuracy', 0), 4),
+        'Retain Acc ↑'     : round(metrics.get('retain_accuracy', 0), 4),
+        'MIA AUROC →0.5'   : round(metrics.get('mia_auroc', -1), 4),
+    }})
+
+# 2. Collect actually run results from DRIVE_DIR, overriding cached ones if present
 for method_dir in sorted(glob.glob(f'{{DRIVE_DIR}}/*')):
     method_name = os.path.basename(method_dir)
     for jf in glob.glob(f'{{method_dir}}/**/*.json', recursive=True):
@@ -528,13 +581,19 @@ for method_dir in sorted(glob.glob(f'{{DRIVE_DIR}}/*')):
             with open(jf) as f:
                 data = json.load(f)
             if 'forget_quality' in data:
-                results.append({{
+                new_entry = {{
                     'Method'           : method_name,
                     'Forget Quality ↑' : round(data.get('forget_quality',   0), 4),
                     'Forget Acc ↓'     : round(data.get('forget_accuracy',  0), 4),
                     'Retain Acc ↑'     : round(data.get('retain_accuracy',  0), 4),
                     'MIA AUROC →0.5'   : round(data.get('mia_auroc',       -1), 4),
-                }})
+                }}
+                # Replace if already exists in results
+                existing_idx = next((i for i, r in enumerate(results) if r['Method'] == method_name), None)
+                if existing_idx is not None:
+                    results[existing_idx] = new_entry
+                else:
+                    results.append(new_entry)
                 break
         except Exception:
             pass
