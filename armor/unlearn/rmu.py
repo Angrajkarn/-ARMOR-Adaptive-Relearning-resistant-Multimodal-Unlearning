@@ -55,7 +55,8 @@ class HiddenStateExtractor:
         # Try different architectures
         layers = None
         for attr in ["layers", "h", "blocks", "transformer.h",
-                     "model.layers", "gpt_neox.layers"]:
+                     "model.layers", "gpt_neox.layers",
+                     "base_model.model.model.layers", "base_model.model.transformer.h"]:
             try:
                 obj = model
                 for part in attr.split("."):
