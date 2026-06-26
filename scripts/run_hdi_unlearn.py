@@ -13,15 +13,9 @@ import os
 import sys
 import warnings
 
-# Make armor importable
+import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-warnings.filterwarnings("ignore", message=".*symlink.*")
-
-if sys.platform == "win32":
-    import io
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', line_buffering=True)
-
+import armor
 import torch
 from armor.config import ARMORConfig
 from armor.data   import load_tofu_splits, make_dataloader

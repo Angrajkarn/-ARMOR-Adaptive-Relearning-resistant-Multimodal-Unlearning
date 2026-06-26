@@ -42,10 +42,10 @@ class HolographicInterference:
         
         def get_hook(name):
             def hook(module, inp):
-                x = inp[0].detach().cpu()
+                x = inp[0].detach()
                 x = x.reshape(-1, x.size(-1))
                 if x.size(0) > 200:
-                    indices = torch.randperm(x.size(0))[:200]
+                    indices = torch.randperm(x.size(0), device=x.device)[:200]
                     x = x[indices]
                 activations[name].append(x)
             return hook
@@ -59,7 +59,10 @@ class HolographicInterference:
                 input_ids = batch["input_ids"].to(self.device)
                 attention_mask = batch["attention_mask"].to(self.device)
                 self.model(input_ids=input_ids, attention_mask=attention_mask)
-                
+                for name in targets:
+                    if activations[name]:
+                        activations[name][-1] = activations[name][-1].cpu()
+            
         for h in hooks:
             h.remove()
             
