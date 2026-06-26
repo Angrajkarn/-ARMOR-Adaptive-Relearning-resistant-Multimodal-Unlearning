@@ -247,7 +247,8 @@ class LoRAInjector:
             setattr(parent, attr, adapter.linear)   # restore original
 
         for p in self.model.parameters():
-            p.requires_grad_(True)
+            if p.dtype.is_floating_point:
+                p.requires_grad_(True)
 
         self._adapters.clear()
 

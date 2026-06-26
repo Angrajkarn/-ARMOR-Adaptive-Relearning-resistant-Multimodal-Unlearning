@@ -205,7 +205,8 @@ class CausalUnlearner:
                     break
             
             if is_causal:
-                param.requires_grad = True
+                if param.dtype.is_floating_point:
+                    param.requires_grad = True
             else:
                 param.requires_grad = False
 
@@ -299,7 +300,8 @@ class CausalUnlearner:
         # Restore original requires_grad states
         for name, param in self.model.named_parameters():
             if name in orig_requires_grad:
-                param.requires_grad = orig_requires_grad[name]
+                if param.dtype.is_floating_point:
+                    param.requires_grad = orig_requires_grad[name]
 
         elapsed = time.time() - t0
         print(f"[CIU] Interventional surgery complete in {elapsed:.1f}s")
