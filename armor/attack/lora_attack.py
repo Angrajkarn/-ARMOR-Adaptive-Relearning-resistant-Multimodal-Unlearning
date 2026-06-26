@@ -52,6 +52,12 @@ class LoRALinear(nn.Module):
         # LoRA decomposition: ΔW = B @ A
         device = linear.weight.device
         dtype  = linear.weight.dtype
+        if not dtype.is_floating_point:
+            if hasattr(linear, "compute_dtype") and getattr(linear, "compute_dtype") is not None:
+                dtype = getattr(linear, "compute_dtype")
+            else:
+                dtype = torch.float16 if device.type == "cuda" else torch.float32
+
         self.lora_A = nn.Parameter(torch.randn(rank, in_features, device=device, dtype=dtype) * 0.01)
         self.lora_B = nn.Parameter(torch.zeros(out_features, rank, device=device, dtype=dtype))
 

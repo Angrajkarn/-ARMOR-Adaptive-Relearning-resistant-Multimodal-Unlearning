@@ -36,16 +36,16 @@ class HolographicInterference:
         return targets
 
     def get_activations(self, loader: DataLoader, targets: Dict[str, nn.Module]) -> Dict[str, torch.Tensor]:
-        """Runs a forward pass and captures the input activations to target layers."""
+        """Runs a forward pass and captures the input activations to target layers on CPU."""
         activations = {name: [] for name in targets}
         hooks = []
         
         def get_hook(name):
             def hook(module, inp):
-                x = inp[0].detach()
+                x = inp[0].detach().cpu()
                 x = x.reshape(-1, x.size(-1))
-                if x.size(0) > 1000:
-                    indices = torch.randperm(x.size(0))[:1000]
+                if x.size(0) > 200:
+                    indices = torch.randperm(x.size(0))[:200]
                     x = x[indices]
                 activations[name].append(x)
             return hook
@@ -67,7 +67,7 @@ class HolographicInterference:
             if activations[name]:
                 activations[name] = torch.cat(activations[name], dim=0)
             else:
-                activations[name] = torch.empty(0, device=self.device)
+                activations[name] = torch.empty(0)
                 
         return activations
 
@@ -98,8 +98,9 @@ class HolographicInterference:
         print("[HDI] Phase 3: Constructing Anti-Phase Projection Matrices...")
         modified_count = 0
         for name, module in tqdm(targets.items(), desc="[HDI] Injecting Interference"):
-            f_acts = forget_acts[name]
-            r_acts = retain_acts[name]
+            # Move activations to GPU dynamically on a per-layer basis
+            f_acts = forget_acts[name].to(self.device)
+            r_acts = retain_acts[name].to(self.device)
             
             if f_acts.size(0) == 0:
                 continue
@@ -125,13 +126,36 @@ class HolographicInterference:
             
             # Apply projection algebraically
             with torch.no_grad():
-                if isinstance(module, nn.Linear):
+                # Check if this is a quantized 4-bit layer
+                is_4bit = hasattr(module.weight, "quant_state") and module.weight.quant_state is not None
+                
+                if is_4bit:
+                    try:
+                        import bitsandbytes as bnb
+                        # Dequantize to float
+                        weight_float = bnb.functional.dequantize_4bit(module.weight.data, module.weight.quant_state)
+                        # Perform projection
+                        projected_weight = torch.mm(weight_float, P)
+                        
+                        # Requantize and assign back
+                        quant_type = getattr(module.weight, "quant_type", "nf4")
+                        new_param = bnb.nn.Params4bit(
+                            projected_weight.to("cpu"),
+                            requires_grad=False,
+                            quant_type=quant_type
+                        ).to(self.device)
+                        module.weight.data = new_param.data
+                        module.weight.quant_state = new_param.quant_state
+                        modified_count += 1
+                    except Exception as e:
+                        print(f"Warning: Failed to apply HDI projection to 4-bit layer {name} due to: {e}. Skipping.")
+                elif isinstance(module, nn.Linear):
                     # W_new = W P
                     module.weight.copy_(torch.mm(module.weight, P))
+                    modified_count += 1
                 elif type(module).__name__ == "Conv1D":
                     # Conv1D weights are (in_features, out_features), so W_new = P W
                     module.weight.copy_(torch.mm(P, module.weight))
-            
-            modified_count += 1
+                    modified_count += 1
             
         print(f"[HDI] Zero-shot unlearning complete. Projected {modified_count} layers.")

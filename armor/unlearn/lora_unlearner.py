@@ -102,6 +102,12 @@ class LoRALayer(nn.Module):
         # LoRA matrices A and B
         device = linear.weight.device
         dtype  = linear.weight.dtype
+        if not dtype.is_floating_point:
+            if hasattr(linear, "compute_dtype") and getattr(linear, "compute_dtype") is not None:
+                dtype = getattr(linear, "compute_dtype")
+            else:
+                dtype = torch.float16 if device.type == "cuda" else torch.float32
+
         self.lora_A  = nn.Parameter(torch.empty(rank, in_features, device=device, dtype=dtype))
         self.lora_B  = nn.Parameter(torch.zeros(out_features, rank, device=device, dtype=dtype))
 
@@ -288,12 +294,38 @@ class NegativeLoRAApplicator:
             if not isinstance(mod, nn.Linear):
                 continue
 
-            delta_dev = delta.to(device=mod.weight.device,
-                                  dtype=mod.weight.dtype)
+            # Check if this is a quantized 4-bit layer
+            is_4bit = hasattr(mod.weight, "quant_state") and mod.weight.quant_state is not None
+            
             with torch.no_grad():
-                mod.weight.data -= scale * delta_dev
+                if is_4bit:
+                    try:
+                        import bitsandbytes as bnb
+                        # Dequantize to float
+                        weight_float = bnb.functional.dequantize_4bit(mod.weight.data, mod.weight.quant_state)
+                        delta_dev = delta.to(device=weight_float.device, dtype=weight_float.dtype)
+                        # Subtract delta
+                        weight_float -= scale * delta_dev
+                        
+                        # Requantize and assign back
+                        quant_type = getattr(mod.weight, "quant_type", "nf4")
+                        new_param = bnb.nn.Params4bit(
+                            weight_float.to("cpu"),
+                            requires_grad=False,
+                            quant_type=quant_type
+                        ).to(mod.weight.device)
+                        mod.weight.data = new_param.data
+                        mod.weight.quant_state = new_param.quant_state
+                        delta_dev_numel = delta.numel()
+                    except Exception as e:
+                        print(f"Warning: Failed to apply negative adapter to 4-bit layer {mod_name} due to: {e}. Skipping.")
+                        delta_dev_numel = 0
+                else:
+                    delta_dev = delta.to(device=mod.weight.device, dtype=mod.weight.dtype)
+                    mod.weight.data -= scale * delta_dev
+                    delta_dev_numel = delta_dev.numel()
 
-            n_modified += delta_dev.numel()
+            n_modified += delta_dev_numel
 
         if verbose:
             print(f"[LoRA] Negative adapter applied: "

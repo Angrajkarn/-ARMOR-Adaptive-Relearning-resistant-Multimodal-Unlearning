@@ -96,7 +96,7 @@ class ReplayBuffer:
                 if j < self.capacity:
                     self._storage[j] = sample
 
-    def sample(self, n: int = 4) -> Optional[Dict[str, torch.Tensor]]:
+    def sample(self, n: int = 4, pad_token_id: Optional[int] = None) -> Optional[Dict[str, torch.Tensor]]:
         """
         Sample `n` exemplars from the buffer and collate into a batch.
         Returns None if the buffer is empty.
@@ -104,7 +104,30 @@ class ReplayBuffer:
         if not self._storage:
             return None
         chosen = random.choices(self._storage, k=min(n, len(self._storage)))
-        return {k: torch.cat([s[k] for s in chosen], dim=0) for k in chosen[0]}
+        
+        # Dynamically pad chosen samples along dimension 1 (sequence length)
+        max_len = max(s['input_ids'].shape[1] for s in chosen)
+        collated = {}
+        
+        for k in chosen[0].keys():
+            padded_tensors = []
+            for s in chosen:
+                t = s[k]
+                l = t.shape[1]
+                if l < max_len:
+                    pad_len = max_len - l
+                    if k == "input_ids":
+                        pad_val = pad_token_id if pad_token_id is not None else 0
+                    elif k == "labels":
+                        pad_val = -100
+                    else:
+                        pad_val = 0
+                    pad_tensor = torch.full((1, pad_len), pad_val, dtype=t.dtype, device=t.device)
+                    t = torch.cat([t, pad_tensor], dim=1)
+                padded_tensors.append(t)
+            collated[k] = torch.cat(padded_tensors, dim=0)
+            
+        return collated
 
     def __len__(self) -> int:
         return len(self._storage)
@@ -368,8 +391,8 @@ class ContinualUnlearner:
                                  labels=r_labels)
                 retain_loss = cfg.ga_retain_coeff * out_r.loss
 
-                # ── Replay loss (from buffer) ──────────────────────────────
-                replay_batch = self.buffer.sample(n=cfg.batch_size)
+                pad_token_id = self.tokenizer.pad_token_id if self.tokenizer is not None else 0
+                replay_batch = self.buffer.sample(n=cfg.batch_size, pad_token_id=pad_token_id)
                 replay_loss  = torch.tensor(0.0, device=device)
                 if replay_batch is not None:
                     rp_ids   = replay_batch["input_ids"].to(device)

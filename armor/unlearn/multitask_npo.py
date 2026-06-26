@@ -127,22 +127,26 @@ class MultiTaskNPOUnlearner:
     def _capture_grads(self) -> List[torch.Tensor]:
         """
         Capture per-parameter gradients as a list of cloned tensors.
-        Never allocates a single flat tensor — avoids Windows OOM/segfault.
+        Only processes trainable parameters to avoid allocating huge zero tensors for frozen weights.
         """
         grads = []
         for p in self.model.parameters():
-            if p.grad is not None:
-                grads.append(p.grad.detach().clone())
-            else:
-                grads.append(torch.zeros_like(p))
+            if p.requires_grad:
+                if p.grad is not None:
+                    grads.append(p.grad.detach().clone())
+                else:
+                    grads.append(torch.zeros_like(p))
         return grads
 
     def _apply_grads(self, grads: List[torch.Tensor]):
         """Write per-parameter gradient list back to model in-place."""
-        for p, g in zip(self.model.parameters(), grads):
-            if p.grad is None:
-                p.grad = torch.zeros_like(p)
-            p.grad.copy_(g)
+        idx = 0
+        for p in self.model.parameters():
+            if p.requires_grad:
+                if p.grad is None:
+                    p.grad = torch.zeros_like(p)
+                p.grad.copy_(grads[idx])
+                idx += 1
 
     def train(self,
               forget_loaders: List[DataLoader],
@@ -220,9 +224,9 @@ class MultiTaskNPOUnlearner:
                         basis.append([gi / scale for gi in g_ortho])
 
                 # ── Weighted sum of orthogonal gradients ───────────────────
-                n_params = len(list(self.model.parameters()))
+                n_params = len([p for p in self.model.parameters() if p.requires_grad])
                 combined: List[torch.Tensor] = [
-                    torch.zeros_like(p) for p in self.model.parameters()
+                    torch.zeros_like(p) for p in self.model.parameters() if p.requires_grad
                 ]
                 for w, g in zip(weights, ortho_grads):
                     for i, gi in enumerate(g):

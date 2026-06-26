@@ -407,6 +407,7 @@ class RLACERMUUnlearner:
                 r_mask = r_batch.get("attention_mask",
                                      torch.ones_like(r_ids)).to(device)
                 model(input_ids=r_ids, attention_mask=r_mask)
+                h_retain_dict = {L: extractor.hidden_state for L, extractor in model_extractors.items()}
 
                 retain_loss = torch.tensor(0.0, device=device)
                 with torch.no_grad():
@@ -417,7 +418,7 @@ class RLACERMUUnlearner:
                         self.ref_model(input_ids=r_ids, attention_mask=r_mask)
 
                 for L in self.target_layers:
-                    h_retain = model_extractors[L].hidden_state
+                    h_retain = h_retain_dict[L]
                     h_ref    = ref_extractors[L].hidden_state.detach()
                     retain_loss = retain_loss + F.mse_loss(
                         h_retain,

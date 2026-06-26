@@ -15,3 +15,12 @@ Architecture overview (designed for LLaVA extension):
 
 __version__ = "0.1.0"
 __author__  = "ARMOR Research"
+
+import sys
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
+
