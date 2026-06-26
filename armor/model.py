@@ -238,9 +238,10 @@ def save_checkpoint(model: PreTrainedModel,
 
 
 def load_checkpoint(path: str,
-                    cfg: ARMORConfig) -> Tuple[PreTrainedModel, PreTrainedTokenizer]:
+                    cfg: ARMORConfig,
+                    is_trainable: bool = False) -> Tuple[PreTrainedModel, PreTrainedTokenizer]:
     """Load a previously saved checkpoint for evaluation or attack."""
-    print(f"[model] Loading checkpoint from {path}")
+    print(f"[model] Loading checkpoint from {path} (is_trainable={is_trainable})")
     tokenizer = AutoTokenizer.from_pretrained(path)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
@@ -251,12 +252,16 @@ def load_checkpoint(path: str,
         # Checkpoint has LoRA adapter weights — load on top of base model
         from peft import PeftModel
         base_model, _ = get_model_and_tokenizer(cfg, verbose=False)
-        model = PeftModel.from_pretrained(base_model, path)
+        model = PeftModel.from_pretrained(base_model, path, is_trainable=is_trainable)
+        if is_trainable:
+            model.enable_input_require_grads()
     elif os.path.isfile(adapter_config):
         # Has adapter but qlora flag not set — still try PEFT
         from peft import PeftModel
         base_model, _ = get_model_and_tokenizer(cfg, verbose=False)
-        model = PeftModel.from_pretrained(base_model, path)
+        model = PeftModel.from_pretrained(base_model, path, is_trainable=is_trainable)
+        if is_trainable:
+            model.enable_input_require_grads()
     else:
         # Full-model checkpoint (no adapter) — load directly
         config_file = os.path.join(path, "config.json")

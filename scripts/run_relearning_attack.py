@@ -86,7 +86,7 @@ def run_attack_on_checkpoint(ckpt_path: str, method_name: str,
         print(f"[attack] Run the unlearning script first, then attack.")
         return None
 
-    model, tokenizer = load_checkpoint(ckpt_path, cfg)
+    model, tokenizer = load_checkpoint(ckpt_path, cfg, is_trainable=True)
 
     attacker = RelearningAttack(
         model=model,
