@@ -55,6 +55,7 @@ def parse_args():
                    help="Miscoverage rate alpha (default: 0.05 = 5%%)")
     p.add_argument("--retain-check-n", type=int, default=50,
                    help="Number of retain samples for sanity coverage check")
+    p.add_argument("--hf-token",  default=None, help="HuggingFace token for gated models")
     p.add_argument("--save-html",  action="store_true", help="Save HTML report")
     p.add_argument("--no-save",    action="store_true", help="Skip saving outputs")
     p.add_argument("--output-dir", default="outputs/conformal")
@@ -70,6 +71,7 @@ def main():
         debug=args.debug,
         model_key="debug" if args.debug else args.model,
         use_qlora=args.qlora,
+        hf_token=args.hf_token,
     )
 
     print("\n" + "=" * 72)

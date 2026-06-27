@@ -32,6 +32,7 @@ def parse_args():
     p.add_argument("--num-clients", type=int, default=3)
     p.add_argument("--byzantine-frac", type=float, default=0.33)
     p.add_argument("--aggregation", default="krum", choices=["krum", "trimmed_mean", "mean"])
+    p.add_argument("--hf-token", default=None)
     p.add_argument("--no-rouge", action="store_true")
     p.add_argument("--no-save", action="store_true")
     p.add_argument("--output-dir", default="outputs/federated_robust")
@@ -44,6 +45,7 @@ def main():
         debug=args.debug,
         model_key="debug" if args.debug else args.model,
         use_qlora=args.qlora,
+        hf_token=args.hf_token,
     )
 
     # Override defaults with CLI args if specified

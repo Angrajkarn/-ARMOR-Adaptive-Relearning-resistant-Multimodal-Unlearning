@@ -31,6 +31,7 @@ def parse_args():
     p.add_argument("--qlora", action="store_true")
     p.add_argument("--lcage-coeff", type=float, default=0.3)
     p.add_argument("--lcage-threshold", type=float, default=0.5)
+    p.add_argument("--hf-token", default=None)
     p.add_argument("--no-rouge", action="store_true")
     p.add_argument("--no-save", action="store_true")
     p.add_argument("--output-dir", default="outputs/lcage")
@@ -43,6 +44,7 @@ def main():
         debug=args.debug,
         model_key="debug" if args.debug else args.model,
         use_qlora=args.qlora,
+        hf_token=args.hf_token,
     )
 
     # Override defaults with CLI args if specified
