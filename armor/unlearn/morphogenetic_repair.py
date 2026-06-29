@@ -36,17 +36,20 @@ class MWRPRepairer:
         tokenizer: PreTrainedTokenizer,
         cfg: ARMORConfig,
         optimizer: Optional[torch.optim.Optimizer] = None,
+        pre_weights: Optional[Dict[str, torch.Tensor]] = None,
     ):
         self.model = model
         self.pre_model = pre_model
         self.tokenizer = tokenizer
         self.cfg = cfg
         self.device = cfg.device
+        self.pre_weights = pre_weights
 
-        # Freeze pre-model
-        for p in pre_model.parameters():
-            p.requires_grad_(False)
-        pre_model.eval()
+        # Freeze pre-model if it's a separate model instance
+        if pre_model is not model:
+            for p in pre_model.parameters():
+                p.requires_grad_(False)
+            pre_model.eval()
 
         self.damage_threshold = cfg.mwrp_damage_threshold
         self.repair_epochs = cfg.mwrp_repair_epochs
@@ -73,7 +76,10 @@ class MWRPRepairer:
         damaged_params = 0
 
         # Create dictionaries of model parameters
-        pre_params = {name: param for name, param in self.pre_model.named_parameters()}
+        if self.pre_weights is not None:
+            pre_params = self.pre_weights
+        else:
+            pre_params = {name: param for name, param in self.pre_model.named_parameters()}
 
         for name, param in self.model.named_parameters():
             if param.requires_grad and name in pre_params:

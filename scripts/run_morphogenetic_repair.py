@@ -97,6 +97,10 @@ def main():
 
     # Step 1: Perform unlearning (use NPO as baseline unlearning) to introduce "damage"
     print("\n[MWRP] === INTRODUCING UNLEARNING DAMAGE (NPO) ===")
+    
+    # Save the original trainable parameters (weights) before unlearning starts
+    pre_weights = {name: param.clone().detach() for name, param in model.named_parameters() if param.requires_grad}
+
     unlearner = NPOUnlearner(
         model=model,
         ref_model=pre_model,
@@ -123,6 +127,7 @@ def main():
         pre_model=pre_model,
         tokenizer=tokenizer,
         cfg=cfg,
+        pre_weights=pre_weights,
     )
 
     # Run repair distillation on the retain set

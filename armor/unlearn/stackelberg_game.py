@@ -105,7 +105,7 @@ class SAUGUnlearner:
         forget_batch = {k: v.to(self.device) for k, v in forget_batch.items()}
 
         # 1. Sync auditor weights with the current model
-        self.auditor.load_state_dict(self.model.state_dict())
+        self.auditor.load_state_dict(self.model.state_dict(), strict=False)
         self.auditor.train()
 
         # 2. Setup standard AdamW optimizer for the auditor
