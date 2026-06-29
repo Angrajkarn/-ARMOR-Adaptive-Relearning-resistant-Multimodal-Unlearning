@@ -185,6 +185,15 @@ class CausalUnlearner:
         retain_loader: Optional[DataLoader] = None,
     ) -> UnlearningResult:
         """Runs the Causal Interventional Unlearning process."""
+        # Disable gradient checkpointing temporarily to avoid CheckpointError under partial freezing
+        grad_checkpointing_was_enabled = False
+        if hasattr(self.model, "is_gradient_checkpointing") and self.model.is_gradient_checkpointing:
+            grad_checkpointing_was_enabled = True
+            try:
+                self.model.gradient_checkpointing_disable()
+            except Exception:
+                pass
+
         # 1. Compute causal layers
         ace_scores = self._compute_causal_effects(forget_loader)
         
@@ -302,6 +311,13 @@ class CausalUnlearner:
             if name in orig_requires_grad:
                 if param.dtype.is_floating_point:
                     param.requires_grad = orig_requires_grad[name]
+
+        # Restore gradient checkpointing
+        if grad_checkpointing_was_enabled:
+            try:
+                self.model.gradient_checkpointing_enable()
+            except Exception:
+                pass
 
         elapsed = time.time() - t0
         print(f"[CIU] Interventional surgery complete in {elapsed:.1f}s")

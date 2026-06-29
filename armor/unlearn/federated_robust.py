@@ -273,7 +273,7 @@ class BRFUUnlearner:
 
             for step in pbar:
                 # Sync client model with the global model
-                client_model.load_state_dict(model.state_dict())
+                client_model.load_state_dict(model.state_dict(), strict=False)
                 client_model.train()
 
                 client_grads_list = []
