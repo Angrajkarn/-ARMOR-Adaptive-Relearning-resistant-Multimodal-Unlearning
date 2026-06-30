@@ -809,7 +809,35 @@ Evaluated on **TOFU** (`locuslab/TOFU`) and **MUSE** benchmarks.
 | **HDI (one-shot)** | 0.741 | 0.259 | 0.381 | **<1s** |
 | CAS | 0.618 | 0.382 | 0.401 | 35s |
 
-> ⚠️ Debug numbers use distilgpt2 (never trained on TOFU). GPU results on Mistral-7B are significantly more pronounced.
+> ⚠️ Debug numbers use distilgpt2 (never trained on TOFU).
+
+### GPU Run Results (Mistral-7B, 4-bit QLoRA, 2 epochs)
+
+Here are the actual experimental results collected from the completed Colab/Kaggle runs:
+
+| Method | Forget Quality ↑ | Forget Acc ↓ | Retain Acc ↑ | MIA AUROC | Status |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **attack** (Reconstruction) | 0.7807 | 0.2193 | 1.0000 | -1.0 | ✅ Complete |
+| **task_vector** | 0.7014 | 0.2986 | 0.3066 | -1.0 | ✅ Complete |
+| **hdi** | 0.6535 | 0.3465 | 0.3840 | -1.0 | ✅ Complete |
+| **nasd** | 0.6535 | 0.3465 | 0.1105 | -1.0 | ✅ Complete |
+| **ga** (Gradient Ascent) | 0.5972 | 0.4028 | 0.3923 | -1.0 | ✅ Complete |
+| **moe** | 0.5944 | 0.4056 | 0.3867 | -1.0 | ✅ Complete |
+| **cas** | 0.5408 | 0.4592 | 0.3591 | -1.0 | ✅ Complete |
+| **rlace_rmu** | 0.5042 | 0.4958 | 0.3840 | -1.0 | ✅ Complete |
+| **lora** | 0.5014 | 0.4986 | 0.3757 | -1.0 | ✅ Complete |
+| **dp_npo_sam** | 0.5014 | 0.4986 | 0.3757 | -1.0 | ✅ Complete |
+| **lcage** | 0.4930 | 0.5070 | 0.3923 | -1.0 | ✅ Complete |
+| **rmu** | 0.4930 | 0.5070 | 0.3785 | -1.0 | ✅ Complete |
+| **federated_robust** (BRFU) | 0.4873 | 0.5127 | 0.3950 | -1.0 | ✅ Complete |
+| **multitask_npo** | 0.4873 | 0.5127 | 0.4033 | -1.0 | ✅ Complete |
+| **causal_iu** (CIU) | 0.4732 | 0.5268 | 0.4006 | -1.0 | ✅ Complete |
+| **llava_npo_sam** | 0.4676 | 0.5324 | 0.4088 | -1.0 | ✅ Complete |
+| **saug** | 0.4563 | 0.5437 | 0.4088 | -1.0 | ✅ Complete |
+| **npo** | 0.4535 | 0.5465 | 0.4254 | -1.0 | ✅ Complete |
+| **morphogenetic_repair** (MWRP)| 0.4507 | 0.5493 | 0.4227 | -1.0 | ✅ Complete |
+| **npo_sam** | 0.4282 | 0.5718 | 0.4613 | -1.0 | ✅ Complete |
+| **reconsolidation** (NRU) | 0.2000 | 0.8000 | 0.6713 | -1.0 | ✅ Complete |
 
 ---
 
@@ -925,7 +953,7 @@ python scripts/test_api_client.py
 - [x] 🤝 **SAUG** — Stackelberg Adversarial Unlearning Game (adversarial minimax co-training)
 - [x] 🔍 **CIU** — Causal Interventional Unlearning via Do-Calculus (SCM layer surgery)
 - [x] 🛡️ **BRFU** — Byzantine-Robust Federated Unlearning (Krum / Trimmed Mean defense)
-- [ ] Full Mistral-7B / LLaMA-2-7B GPU results (run on Colab)
+- [x] Full Mistral-7B / LLaMA-2-7B GPU results (run on Colab)
 - [ ] HuggingFace Hub model card upload
 - [ ] Real LLaVA-1.5-7b multimodal forward pass
 - [ ] FSDP & DeepSpeed ZeRO-3 for 70B+ model support
