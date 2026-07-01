@@ -115,8 +115,12 @@ class LLaVATextImageDataset(Dataset):
         # Cycle through images if fewer images than samples
         image = self.images[idx % len(self.images)]
 
-        question = sample.get("question", sample.get("input", "Describe the image."))
-        answer   = sample.get("answer",   sample.get("target", ""))
+        if hasattr(sample, "get"):
+            question = sample.get("question", sample.get("input", "Describe the image."))
+            answer   = sample.get("answer",   sample.get("target", ""))
+        else:
+            question = getattr(sample, "question", "Describe the image.")
+            answer   = getattr(sample, "answer", "")
 
         prompt = self.LLAVA_PROMPT_TEMPLATE.format(
             question=question, answer=answer
