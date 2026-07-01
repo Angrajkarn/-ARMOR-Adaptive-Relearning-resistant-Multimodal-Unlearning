@@ -954,7 +954,7 @@ python scripts/test_api_client.py
 - [x] 🔍 **CIU** — Causal Interventional Unlearning via Do-Calculus (SCM layer surgery)
 - [x] 🛡️ **BRFU** — Byzantine-Robust Federated Unlearning (Krum / Trimmed Mean defense)
 - [x] Full Mistral-7B / LLaMA-2-7B GPU results (run on Colab)
-- [ ] HuggingFace Hub model card upload
+- [x] HuggingFace Hub model card upload
 - [ ] Real LLaVA-1.5-7b multimodal forward pass
 - [ ] FSDP & DeepSpeed ZeRO-3 for 70B+ model support
 
