@@ -25,6 +25,7 @@ from torch.utils.data import DataLoader, Dataset
 from armor.config import ARMORConfig
 from armor.data   import load_tofu_splits, make_dataloader
 from armor.model  import get_model_and_tokenizer, save_checkpoint, get_frozen_reference_model
+from armor.model  import get_llava_model_and_processor
 from armor.eval.metrics import UnlearningEvaluator
 from armor.eval.mia     import MembershipInferenceAuditor
 from armor.eval.privacy_audit import PrivacyAuditor
@@ -190,6 +191,10 @@ def parse_args():
     p.add_argument("--output-dir", default="outputs/llava_npo_sam")
     p.add_argument("--no-save",    action="store_true",
                    help="Skip saving checkpoint (for smoke tests)")
+    # ── Real LLaVA-1.5-7b options ─────────────────────────────────────────────
+    p.add_argument("--real-llava",  action="store_true",
+                   help="Use real llava-hf/llava-1.5-7b-hf model + Flickr30k images "
+                        "(requires A100/L4 GPU, ~15GB download, transformers>=4.37)")
     return p.parse_args()
 
 
@@ -200,7 +205,7 @@ def main():
 
     cfg = ARMORConfig(
         debug      = args.debug,
-        model_key  = "debug" if args.debug else args.model,
+        model_key  = "debug" if args.debug else ("llava-7b" if args.real_llava else args.model),
         use_qlora  = args.qlora,
         hf_token   = args.hf_token,
         output_dir = args.output_dir,
@@ -209,33 +214,66 @@ def main():
     print("=" * 62)
     print("  ARMOR -- LLaVA Cross-Modal NPO+SAM Unlearning")
     print("=" * 62)
-    mode_str = "cross-modal (text+vision)" if multimodal else "text-only"
+    if args.real_llava:
+        mode_str = "REAL LLaVA-1.5-7b (text+vision via Flickr30k)"
+    elif multimodal:
+        mode_str = "cross-modal (text+synthetic pixel_values)"
+    else:
+        mode_str = "text-only"
     print(f"  Model  : {cfg.model_name}  |  Mode: {mode_str}")
     print(f"  SAM rho: {args.sam_rho}  |  Beta-NPO: {args.beta_npo}")
     print("=" * 62)
 
     forget_samples, retain_samples = load_tofu_splits(cfg)
-    model, tokenizer               = get_model_and_tokenizer(cfg)
-    ref_model                      = get_frozen_reference_model(model, cfg)
 
-    eval_fl = make_dataloader(forget_samples, tokenizer, cfg, shuffle=False)
-    eval_rl = make_dataloader(retain_samples, tokenizer, cfg, shuffle=False)
+    # ── Model & tokenizer / processor loading ─────────────────────────────────
+    if args.real_llava:
+        print("[llava] Loading real LLaVA-1.5-7b-hf model and processor...")
+        model, processor = get_llava_model_and_processor(cfg)
+        tokenizer = processor.tokenizer
+        ref_model = get_frozen_reference_model(model, cfg)
 
-    forget_loader = make_dataloader(
-        forget_samples, tokenizer, cfg,
-        include_rephrases=cfg.use_rephrase_augmentation, shuffle=True)
-    retain_loader = make_dataloader(retain_samples, tokenizer, cfg, shuffle=True)
+        # Build real image+text dataloaders using Flickr30k images
+        from armor.data.multimodal import make_llava_dataloader
+        forget_loader = make_llava_dataloader(
+            forget_samples, processor, cfg,
+            shuffle=True, image_size=cfg.llava_image_size)
+        retain_loader = make_llava_dataloader(
+            retain_samples, processor, cfg,
+            shuffle=True, image_size=cfg.llava_image_size)
+        eval_fl = make_llava_dataloader(
+            forget_samples, processor, cfg,
+            shuffle=False, image_size=cfg.llava_image_size)
+        eval_rl = make_llava_dataloader(
+            retain_samples, processor, cfg,
+            shuffle=False, image_size=cfg.llava_image_size)
+        multimodal = True
+        print(f"[llava] ✅  Real pixel_values ({cfg.llava_image_size}x{cfg.llava_image_size}) "
+              f"flowing through CLIP ViT-L encoder.")
+    else:
+        # Original text-only / synthetic pixel_values paths (fully unchanged)
+        model, tokenizer = get_model_and_tokenizer(cfg)
+        ref_model        = get_frozen_reference_model(model, cfg)
+        processor        = None
 
-    # Optionally wrap with synthetic pixel_values
-    if multimodal:
-        forget_loader = DataLoader(
-            MultimodalWrapperDataset(forget_loader.dataset, args.image_size),
-            batch_size=cfg.batch_size, shuffle=True)
-        retain_loader = DataLoader(
-            MultimodalWrapperDataset(retain_loader.dataset, args.image_size),
-            batch_size=cfg.batch_size, shuffle=True)
-        print(f"[llava] Injected synthetic pixel_values "
-              f"(3x{args.image_size}x{args.image_size})")
+        eval_fl = make_dataloader(forget_samples, tokenizer, cfg, shuffle=False)
+        eval_rl = make_dataloader(retain_samples, tokenizer, cfg, shuffle=False)
+
+        forget_loader = make_dataloader(
+            forget_samples, tokenizer, cfg,
+            include_rephrases=cfg.use_rephrase_augmentation, shuffle=True)
+        retain_loader = make_dataloader(retain_samples, tokenizer, cfg, shuffle=True)
+
+        # Optionally wrap with synthetic pixel_values
+        if multimodal:
+            forget_loader = DataLoader(
+                MultimodalWrapperDataset(forget_loader.dataset, args.image_size),
+                batch_size=cfg.batch_size, shuffle=True)
+            retain_loader = DataLoader(
+                MultimodalWrapperDataset(retain_loader.dataset, args.image_size),
+                batch_size=cfg.batch_size, shuffle=True)
+            print(f"[llava] Injected synthetic pixel_values "
+                  f"(3x{args.image_size}x{args.image_size})")
 
     evaluator  = UnlearningEvaluator(model, tokenizer, cfg)
     pre_result = evaluator.evaluate(
@@ -257,14 +295,15 @@ def main():
 
     post_result = evaluator.evaluate(
         forget_samples, retain_samples, eval_fl, eval_rl,
-        method_name="LLaVA-NPO+SAM",
+        method_name="LLaVA-NPO+SAM" + ("-Real" if args.real_llava else ""),
         run_rouge=not args.no_rouge,
         max_rouge_samples=20 if cfg.debug else 50)
     post_result.print_table()
 
     if args.run_mia:
         PrivacyAuditor(cfg, model, tokenizer).audit(
-            eval_fl, eval_rl, method_name="LLaVA-NPO+SAM").print_summary()
+            eval_fl, eval_rl,
+            method_name="LLaVA-NPO+SAM" + ("-Real" if args.real_llava else "")).print_summary()
 
     if not args.no_save:
         os.makedirs(args.output_dir, exist_ok=True)
@@ -279,10 +318,11 @@ def main():
     # Save evaluation results to JSON
     import json
     res_dict = {
-        "forget_quality": post_result.forget_quality,
+        "forget_quality":  post_result.forget_quality,
         "forget_accuracy": post_result.forget_accuracy,
         "retain_accuracy": post_result.retain_accuracy,
-        "mia_auroc": getattr(post_result, "mia_auroc", -1.0)
+        "mia_auroc":       getattr(post_result, "mia_auroc", -1.0),
+        "real_llava":      args.real_llava,
     }
     os.makedirs(args.output_dir, exist_ok=True)
     with open(os.path.join(args.output_dir, "eval_results.json"), "w", encoding="utf-8") as f:

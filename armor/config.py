@@ -29,8 +29,8 @@ SUPPORTED_MODELS = {
     "mistral-7b": "mistralai/Mistral-7B-v0.1",
     "llama2-7b":  "meta-llama/Llama-2-7b-hf",     # needs HF token + gated access
 
-    # Placeholder for LLaVA (Step 2 — cross-modal extension)
-    # "llava-7b": "llava-hf/llava-1.5-7b-hf",
+    # LLaVA-1.5-7b — real multimodal vision+language (needs A100 / L4 GPU, ~15 GB)
+    "llava-7b": "llava-hf/llava-1.5-7b-hf",
 }
 
 
@@ -137,6 +137,9 @@ class ARMORConfig:
     mm_mia_contrastive_temp: float = 0.07     # softmax temperature for contrastive loss
     mm_mia_contrastive_coeff: float = 1.0    # weight of contrastive unlearning loss
     mm_mia_similarity_threshold: float = 0.50  # cosine sim threshold for MIA detection
+
+    # ── LLaVA Real Multimodal Settings ───────────────────────────────────────
+    llava_image_size: int = 336               # CLIP ViT-L input resolution (do not change)
 
     # ── Module 6 — Modular LoRA Unlearning ───────────────────────────────────
     lora_unlearn_r: int = 16                  # rank of forget LoRA adapter

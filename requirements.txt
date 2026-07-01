@@ -20,8 +20,8 @@ numpy>=1.26.0
                            # Current dp_npo_sam.py uses batch-level approximation
 
 # ─── Cross-Modal / LLaVA (Phase 5) ───────────────────────────────────────────
-# Pillow>=10.0.0          # Uncomment for real image loading in LLaVA
-# torchvision>=0.16.0     # Uncomment for image preprocessing
+Pillow>=10.0.0          # Required for real image loading in LLaVA
+torchvision>=0.16.0     # Required for image preprocessing
 
 # ─── MUSE Benchmark (Phase 3) ─────────────────────────────────────────────────
 # jaechan-llm/MUSE loaded via datasets — no extra install needed

@@ -275,3 +275,143 @@ def load_checkpoint(path: str,
             model, tokenizer = get_model_and_tokenizer(cfg, verbose=False)
 
     return model, tokenizer
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# LLaVA-1.5-7b loader (real multimodal forward pass)
+# ──────────────────────────────────────────────────────────────────────────────
+
+def get_llava_model_and_processor(
+    cfg: "ARMORConfig",
+    verbose: bool = True,
+) -> tuple:
+    """
+    Load LLaVA-1.5-7b-hf in 4-bit QLoRA for real multimodal unlearning.
+
+    Returns
+    -------
+    model     : LlavaForConditionalGeneration wrapped with LoRA adapters
+                on the language_model sub-module only.
+    processor : LlavaProcessor (handles both CLIPImageProcessor + LlamaTokenizer)
+
+    Requirements
+    ------------
+    - transformers >= 4.37
+    - bitsandbytes >= 0.41 (GPU only)
+    - peft >= 0.6
+    - Pillow >= 10.0
+    - ~15 GB VRAM on A100 at 4-bit, ~24 GB at bf16
+
+    Example
+    -------
+    cfg = ARMORConfig(model_key="llava-7b", use_qlora=True, hf_token="hf_...")
+    model, processor = get_llava_model_and_processor(cfg)
+    """
+    try:
+        from transformers import LlavaForConditionalGeneration, LlavaProcessor
+    except ImportError:
+        raise ImportError(
+            "LlavaForConditionalGeneration requires transformers>=4.37. "
+            "Upgrade with: pip install -U transformers"
+        )
+
+    model_name = "llava-hf/llava-1.5-7b-hf"
+    device     = cfg.device
+
+    if verbose:
+        print(f"[llava] Loading '{model_name}' on device='{device}' "
+              f"(qlora={cfg.use_qlora})")
+        print(f"[llava] ⚠️  Requires ~15 GB VRAM at 4-bit — use A100 / L4 GPU")
+
+    # ── Clean stale lock files ─────────────────────────────────────────────────
+    try:
+        import pathlib
+        cache_dir = pathlib.Path.home() / ".cache" / "huggingface" / "hub"
+        if cache_dir.exists():
+            for lock_file in cache_dir.glob("**/*.lock"):
+                try:
+                    lock_file.unlink()
+                except Exception:
+                    pass
+    except Exception:
+        pass
+
+    # ── Processor (image + text) ───────────────────────────────────────────────
+    processor = LlavaProcessor.from_pretrained(
+        model_name,
+        token=cfg.hf_token,
+    )
+    if processor.tokenizer.pad_token is None:
+        processor.tokenizer.pad_token = processor.tokenizer.eos_token
+        processor.tokenizer.pad_token_id = processor.tokenizer.eos_token_id
+
+    # ── Model loading kwargs ───────────────────────────────────────────────────
+    load_kwargs = {
+        "token": cfg.hf_token,
+        "low_cpu_mem_usage": True,
+    }
+    if cfg.use_qlora and device == "cuda":
+        load_kwargs["quantization_config"] = _build_bnb_config()
+        load_kwargs["device_map"] = "auto"
+    elif device == "cuda":
+        load_kwargs["torch_dtype"] = torch.bfloat16
+        load_kwargs["device_map"] = "auto"
+    else:
+        # CPU fallback — float32 (very slow, only for debugging plumbing)
+        load_kwargs["torch_dtype"] = torch.float32
+
+    model = LlavaForConditionalGeneration.from_pretrained(model_name, **load_kwargs)
+
+    if "device_map" not in load_kwargs:
+        model = model.to(device)
+
+    # ── Apply LoRA adapters to the language sub-module only ────────────────────
+    # CLIP vision encoder stays fully frozen; LoRA adapts only the LLaMA layers
+    if cfg.use_qlora:
+        try:
+            from peft import LoraConfig, get_peft_model, TaskType
+        except ImportError:
+            raise ImportError("peft is required. Install with: pip install peft")
+
+        lora_config = LoraConfig(
+            task_type=TaskType.CAUSAL_LM,
+            r=cfg.lora_r,
+            lora_alpha=cfg.lora_alpha,
+            lora_dropout=cfg.lora_dropout,
+            # Target the language model attention projections only
+            target_modules=cfg.lora_target_modules,
+            bias="none",
+        )
+        # get_peft_model wraps the whole LlavaForConditionalGeneration object
+        # but LoRA will only match modules inside language_model (q_proj, v_proj)
+        model = get_peft_model(model, lora_config)
+        model.config.text_config.use_cache = False
+        try:
+            model.enable_input_require_grads()
+        except AttributeError:
+            # Some PEFT versions need this differently
+            model.language_model.enable_input_require_grads()
+
+        if verbose:
+            model.print_trainable_parameters()
+
+    # ── Gradient checkpointing ────────────────────────────────────────────────
+    if device == "cuda":
+        try:
+            model.gradient_checkpointing_enable()
+        except Exception:
+            # LLaVA may raise if vision encoder doesn't support it
+            try:
+                model.language_model.gradient_checkpointing_enable()
+            except Exception:
+                pass
+
+    if verbose:
+        total = sum(p.numel() for p in model.parameters())
+        trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print(f"[llava] Total params     : {total/1e9:.2f}B")
+        print(f"[llava] Trainable params : {trainable/1e6:.1f}M "
+              f"({100*trainable/total:.2f}%)")
+
+    return model, processor
+
