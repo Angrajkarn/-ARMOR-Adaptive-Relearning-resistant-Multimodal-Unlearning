@@ -1,0 +1,43 @@
+{
+  "certificate": {
+    "certificate_id": "db92ee7d-377f-4d4b-af5d-3d95bf2495e6",
+    "timestamp": "2026-06-30T09:56:29.846604+00:00",
+    "issuer": "ARMOR Compliance Auditing Suite v1.2",
+    "model_name": "mistralai/Mistral-7B-v0.1",
+    "unlearning_method": "GradientAscent",
+    "commitments": {
+      "pre_unlearn_model_hash": "eb40c8ddb1d4622d35bd221cf45ed1be25cf057373158194e12aeb1e29eb50c4",
+      "post_unlearn_model_hash": "28e9dea5c1bcd2b032c4ee2da7a63c8999a8299760f64629ae530625241da815",
+      "forget_dataset_hash": "59a07dc401f4aa03a593593871d630966aec555dc55d09da7b97be2fe282cd4a",
+      "pre_unlearn_zk_commitment": "e69aba19b7ebb84ced27863b6a671517dd472ac6627e3faa4e83a6b215f50d7f",
+      "post_unlearn_zk_commitment": "9cab622e8af03b1336235966069728c58836490065259012384b661d7452b1c8"
+    },
+    "metrics": {
+      "zk_influence_verification": {
+        "verdict": "PARTIAL ⚠",
+        "n_verified": 4,
+        "n_total": 5,
+        "mean_influence_gap": 0.07496,
+        "threshold": 0.01
+      },
+      "differential_privacy_bounds": {
+        "mia_auroc": 0.32725,
+        "empirical_epsilon": 0.0,
+        "formal_epsilon": null,
+        "delta": 1e-05,
+        "is_privacy_verified": true
+      },
+      "adversarial_reconstruction_resistance": {
+        "greedy_rouge_l": 0.3152927318445318,
+        "prefix_tree_rouge_l": 0.5344444444444444,
+        "reconstruction_leakage_rate": 0.6,
+        "reconstruction_verdict": "VULNERABLE"
+      }
+    }
+  },
+  "signature": {
+    "algorithm": "HMAC-SHA256",
+    "signed_by": "ARMOR Enterprise Compliance CA",
+    "signature_hash": "37168878181b51a47d6c634d8616cb80ceea6fd57fb9d76d0c64277497ca0a40"
+  }
+}

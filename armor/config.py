@@ -55,6 +55,7 @@ class ARMORConfig:
     lora_target_modules: list = field(         # Attention projections to adapt
         default_factory=lambda: ["q_proj", "v_proj"]
     )
+    llava_image_size: int = 336                # Target image size for LLaVA multimodal unlearning
 
     # ── TOFU Dataset ──────────────────────────────────────────────────────────
     tofu_forget_split: str = "forget01"        # forget01 / forget05 / forget10

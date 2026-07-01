@@ -1,6 +1,6 @@
 """
-armor/data.py
-=============
+armor/data/__init__.py
+======================
 TOFU benchmark dataset loader with rephrase augmentation.
 
 TOFU (Task Of Fictitious Unlearning) — maini/tofu on HuggingFace:

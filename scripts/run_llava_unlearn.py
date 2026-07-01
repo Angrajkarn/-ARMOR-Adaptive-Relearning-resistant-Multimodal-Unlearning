@@ -209,6 +209,7 @@ def main():
         use_qlora  = args.qlora,
         hf_token   = args.hf_token,
         output_dir = args.output_dir,
+        llava_image_size = args.image_size,
     )
 
     print("=" * 62)
