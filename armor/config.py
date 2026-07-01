@@ -236,6 +236,11 @@ class ARMORConfig:
             self.use_qlora         = False
             self.num_rephrases     = 2         # Fewer rephrases in debug
 
+        if "llava" in self.model_key and not self.debug:
+            # LLaVA 1.5 vision encoder consumes 576 tokens for image representation alone.
+            # We override max_seq_len to 1024 to prevent the processor from truncating image slots.
+            self.max_seq_len = 1024
+
     @property
     def model_name(self) -> str:
         """Resolve model key → HuggingFace model ID."""
