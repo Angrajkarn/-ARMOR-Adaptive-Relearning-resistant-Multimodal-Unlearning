@@ -110,9 +110,24 @@ def main():
         sys.exit(1)
 
     print(f"🔄 Authenticating and preparing Hugging Face Hub connection...")
+    from huggingface_hub import whoami
+    try:
+        user_info = whoami(token=token)
+        actual_username = user_info["name"]
+        print(f"✅ Authenticated successfully as user: {actual_username}")
+    except Exception as e:
+        print(f"❌ Authentication failed with your token: {e}")
+        print("Please double-check that your --token is a valid Hugging Face Write Token.")
+        sys.exit(1)
+
     api = HfApi(token=token)
 
     repo_id = args.repo_id
+    if "YOUR_" in repo_id or "/" not in repo_id:
+        repo_name = repo_id.split("/")[-1]
+        repo_id = f"{actual_username}/{repo_name}"
+        print(f"💡 Automatically resolved repository ID to: '{repo_id}'")
+
     print(f"🔄 Creating / verifying Hugging Face repository '{repo_id}'...")
     try:
         create_repo(repo_id=repo_id, token=token, repo_type="model", exist_ok=True)
